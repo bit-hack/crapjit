@@ -44,5 +44,5 @@ int main() {
         printf("factoral(%d) -> %d\n", i, ret);
     }
     // result
-	return 0;
+    return 0;
 }

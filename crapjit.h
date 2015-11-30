@@ -28,27 +28,27 @@ struct reloc_t {
 
 struct crapjit_t {
 
-	crapjit_t();
-	~crapjit_t();
+    crapjit_t();
+    ~crapjit_t();
 
-	void	emit_const	(int32_t);
-	void	emit_drop	();
-	void	emit_dup	();
+    void    emit_const  (int32_t);
+    void    emit_drop   ();
+    void    emit_dup    ();
     void    emit_sink   (uint32_t);
 
-	void	emit_getl	(int32_t);
-	void	emit_setl	(int32_t);
+    void    emit_getl   (int32_t);
+    void    emit_setl   (int32_t);
 
-	void	emit_frame	(uint32_t);
-	void    emit_return	(uint32_t);
+    void    emit_frame  (uint32_t);
+    void    emit_return (uint32_t);
 
-    reloc_t	emit_call   ();
+    reloc_t emit_call   ();
     
     reloc_t emit_jz     ();
-    reloc_t	emit_jnz	();
-    reloc_t	emit_jmp	();
+    reloc_t emit_jnz    ();
+    reloc_t emit_jmp    ();
 
-	label_t emit_label  ();
+    label_t emit_label  ();
 
     void    emit_add    ();
     void    emit_sub    ();
@@ -69,7 +69,7 @@ struct crapjit_t {
 protected:
     reloc_t emit_inst(uint8_t * & ptr, jit_op op);
 
-	uint8_t * data_;
-	uint8_t * head_;
+    uint8_t * data_;
+    uint8_t * head_;
     bool      did_label_;
 };
