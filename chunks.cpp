@@ -1,5 +1,7 @@
 #include "chunks.h"
 
+namespace cj {
+
 jit_chunk_t chunk_table[] = {
   { ins_const   , 6 ,  1, -1, "\xb8\xdd\xcc\xbb\xaa\x50" },
   { ins_getl    , 7 ,  2, -1, "\x8b\x85\xdd\xcc\xbb\xaa\x50" },
@@ -27,3 +29,5 @@ jit_chunk_t chunk_table[] = {
   { ins_jz      , 10, -1,  6, "\x58\x83\xf8\x00\x0f\x84\x24\xcc\xbb\xaa" },
   { ins_jmp     , 5 , -1,  1, "\xe9\x1f\xcc\xbb\xaa" },
 };
+
+}  // namespace cj

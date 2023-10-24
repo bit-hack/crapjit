@@ -1,13 +1,51 @@
 #include <cstring>
+#include <map>
+
 #include "crapjit.h"
 #include "chunks.h"
 #include "system.h"
+
 
 #if defined(_MSC_VER)
 #define assert(X) { if (!(X)) __debugbreak(); }
 #else
 #include <cassert>
 #endif
+
+namespace cj {
+
+static jit_op inst_type(ir_t::type_t type) {
+  switch (type) {
+  case ir_t::IR_CONST:  return ins_const;
+  case ir_t::IR_DROP:   return ins_drop;
+  case ir_t::IR_DUP:    return ins_dup;
+  case ir_t::IR_SINK:   return ins_sink;
+  case ir_t::IR_GETL:   return ins_getl;
+  case ir_t::IR_SETL:   return ins_setl;
+  case ir_t::IR_FRAME:  return ins_frame;
+  case ir_t::IR_RETURN: return ins_ret;
+  case ir_t::IR_CALL:   return ins_call;
+  case ir_t::IR_JZ:     return ins_jz;
+  case ir_t::IR_JNZ:    return ins_jnz;
+  case ir_t::IR_JMP:    return ins_jmp;
+  case ir_t::IR_ADD:    return ins_add;
+  case ir_t::IR_SUB:    return ins_sub;
+  case ir_t::IR_MUL:    return ins_mul;
+  case ir_t::IR_DIV:    return ins_div;
+  case ir_t::IR_AND:    return ins_and;
+  case ir_t::IR_OR:     return ins_or;
+  case ir_t::IR_NOT:    return ins_notl;
+  case ir_t::IR_LT:     return ins_lt;
+  case ir_t::IR_LEQ:    return ins_lte;
+  case ir_t::IR_GT:     return ins_gt;
+  case ir_t::IR_GEQ:    return ins_gte;
+  case ir_t::IR_EQ:     return ins_eq;
+  case ir_t::IR_NEQ:    return ins_neq;
+  default:
+    assert(!"unreachable");
+    return jit_op(0);
+  }
+}
 
 extern jit_chunk_t chunk_table[];
 
@@ -23,9 +61,7 @@ void insert(uint8_t * & ptr, const void * data, const uint32_t size) {
     ptr += size;
 }
 
-crapjit_t::crapjit_t()
-    : did_label_(true)
-{
+crapjit_t::crapjit_t() {
     data_ = head_ = (uint8_t*)code_alloc(1024 * 512);
 }
 
@@ -57,32 +93,15 @@ void reloc_t::imm_u32(uint32_t val) {
     insert(base_, val);
 }
 
-reloc_t crapjit_t::emit_inst(uint8_t * & ptr, jit_op op) {
-
-    const bool optimize = true;
+reloc_t crapjit_t::_emit_inst(uint8_t * & ptr, jit_op op) {
 
     const jit_chunk_t & chunk = chunk_table[op];
 
     reloc_t reloc;
 
-    const uint8_t PUSH_EAX = '\x50';
-    const uint8_t POP_EAX  = '\x58';
+    uint8_t *base = ptr;
 
-    uint8_t * base = ptr;
-
-    // as an optimization, we can merge chunks ending with PUSH_EAX
-    // and starting with POP_EAX
-    if (optimize && 
-        !did_label_ && 
-        chunk.data_[0] == POP_EAX && 
-        ptr[-1] == PUSH_EAX) {
-        ptr  -= 1;          // slide back to cover push eax
-        base  = ptr - 1;    // -1 to account for dropping pop eax later
-        insert(ptr, chunk.data_+1, chunk.size_-1);
-    }
-    else {
-        insert(ptr, chunk.data_, chunk.size_);
-    }
+    insert(ptr, chunk.data_, chunk.size_);
 
     // has absolute offset
     if (chunk.abs_op_ >= 0) {
@@ -96,107 +115,161 @@ reloc_t crapjit_t::emit_inst(uint8_t * & ptr, jit_op op) {
         reloc.base_ = base += chunk.rel_op_;
     }
 
-    did_label_ = false;
     return reloc;
 }
 
 void crapjit_t::emit_const(int32_t val) {
-    emit_inst(head_, ins_const).imm_i32(val);
+    _push(ir_t{ ir_t::IR_CONST, uint32_t(val) });
 }
 
 void crapjit_t::emit_drop() {
-    emit_inst(head_, ins_drop);
+    _push(ir_t{ ir_t::IR_DROP });
 }
 
 void crapjit_t::emit_dup() {
-    emit_inst(head_, ins_dup);
+    _push(ir_t{ ir_t::IR_DUP });
 }
 
 void crapjit_t::emit_sink(uint32_t val) {
-    emit_inst(head_, ins_sink).imm_u32(val*4);
+    _push(ir_t{ ir_t::IR_SINK, val*4 });
 }
 
 void crapjit_t::emit_getl(int32_t offs) {
-    emit_inst(head_, ins_getl).imm_i32(offs*4);
+    _push(ir_t{ ir_t::IR_GETL, uint32_t(offs*4) });
 }
 
 void crapjit_t::emit_setl(int32_t offs) {
-    emit_inst(head_, ins_setl).imm_i32(offs*4);
+    _push(ir_t{ ir_t::IR_SETL, uint32_t(offs*4) });
 }
 
 void crapjit_t::emit_frame(uint32_t val) {
-    emit_inst(head_, ins_frame).imm_u32(val*4);
+    _push(ir_t{ ir_t::IR_FRAME, val });
 }
 
 void crapjit_t::emit_return(uint32_t val) {
-    emit_inst(head_, ins_ret).imm_u32(val*4);
+    _push(ir_t{ ir_t::IR_RETURN, val });
 }
 
-reloc_t crapjit_t::emit_call() {
-    return emit_inst(head_, ins_call);
+ir_t &crapjit_t::emit_call() {
+    return _push(ir_t{ ir_t::IR_CALL });
 }
 
-reloc_t crapjit_t::emit_jz() {
-    return emit_inst(head_, ins_jz);
+ir_t& crapjit_t::emit_jz() {
+    return _push(ir_t{ ir_t::IR_JZ });
 }
 
-reloc_t crapjit_t::emit_jnz() {
-    return emit_inst(head_, ins_jnz);
+ir_t& crapjit_t::emit_jnz() {
+    return _push(ir_t{ ir_t::IR_JNZ });
 }
 
-reloc_t crapjit_t::emit_jmp() {
-    return emit_inst(head_, ins_jmp);
+ir_t& crapjit_t::emit_jmp() {
+    return _push(ir_t{ ir_t::IR_JMP });
 }
 
-label_t crapjit_t::emit_label() {
-    did_label_ = true;
-    return head_;
+ir_t& crapjit_t::emit_label() {
+    return _push(ir_t{ ir_t::IR_LABEL });
 }
 
 void crapjit_t::emit_add() {
-    emit_inst(head_, ins_add);
+    _push(ir_t{ ir_t::IR_ADD });
 }
 
 void crapjit_t::emit_sub() {
-    emit_inst(head_, ins_sub);
+    _push(ir_t{ ir_t::IR_SUB });
 }
 
 void crapjit_t::emit_mul() {
-    emit_inst(head_, ins_mul);
+    _push(ir_t{ ir_t::IR_MUL });
 }
 
 void crapjit_t::emit_div() {
-    emit_inst(head_, ins_div);
+    _push(ir_t{ ir_t::IR_DIV });
 }
 
 void crapjit_t::emit_and() {
-    emit_inst(head_, ins_and);
+    _push(ir_t{ ir_t::IR_AND });
 }
 
 void crapjit_t::emit_or() {
-    emit_inst(head_, ins_or);
+    _push(ir_t{ ir_t::IR_OR });
 }
 
 void crapjit_t::emit_lt() {
-    emit_inst(head_, ins_lt);
+    _push(ir_t{ ir_t::IR_LT });
 }
 
 void crapjit_t::emit_leq() {
-    emit_inst(head_, ins_lte);
+    _push(ir_t{ ir_t::IR_LEQ });
 }
 
 void crapjit_t::emit_gt() {
-    emit_inst(head_, ins_gt);
+    _push(ir_t{ ir_t::IR_GT });
 }
 
 void crapjit_t::emit_geq() {
-    emit_inst(head_, ins_gte);
+    _push(ir_t{ ir_t::IR_GEQ });
 }
 
 void crapjit_t::emit_eq() {
-    emit_inst(head_, ins_eq);
+    _push(ir_t{ ir_t::IR_EQ });
 }
 
 void crapjit_t::emit_neq() {
-    emit_inst(head_, ins_neq);
+    _push(ir_t{ ir_t::IR_NEQ });
 }
+
+ir_t& crapjit_t::_push(const ir_t& inst) {
+    ir.push_back(inst);
+    return ir.back();
+}
+void* crapjit_t::finish() {
+
+  std::map<const ir_t*, label_t> labels;
+  std::map<const ir_t*, reloc_t> relocs;
+
+  head_ = data_;
+
+  // emit instruction stream
+  for (const auto& i : ir) {
+
+    if (i.type == ir_t::IR_LABEL) {
+      labels[&i] = head_;
+      continue;
+    }
+
+    jit_op op = inst_type(i.type);
+    reloc_t reloc = _emit_inst(head_, op);
+
+    switch (i.type) {
+    case ir_t::IR_CONST:
+    case ir_t::IR_GETL:
+    case ir_t::IR_SETL:
+      reloc.imm_i32(i._imm);
+      break;
+    case ir_t::IR_SINK:
+    case ir_t::IR_FRAME:
+    case ir_t::IR_RETURN:
+      reloc.imm_u32(i._imm);
+      break;
+    case ir_t::IR_JZ:
+    case ir_t::IR_JNZ:
+    case ir_t::IR_JMP:
+    case ir_t::IR_CALL:
+      relocs[&i] = reloc;
+      break;
+    }
+  }
+
+  // apply relocations
+  for (const auto &i : relocs) {
+    const ir_t *inst   = i.first;
+    const ir_t *target = inst->_target;
+    label_t ptr = labels[target];
+    reloc_t rel = i.second;
+    rel.set(ptr);
+  }
+
+  return data_;
+}
+
+}  // namespace cj
