@@ -50,13 +50,13 @@ static jit_op inst_type(ir_t::type_t type) {
 extern jit_chunk_t chunk_table[];
 
 template <typename type_t>
-void insert(uint8_t * & ptr, const type_t val) {
+static void insert(uint8_t * & ptr, const type_t val) {
     const uint32_t size = sizeof(type_t);
     memcpy(ptr, &val, size);
     ptr += size;
 }
 
-void insert(uint8_t * & ptr, const void * data, const uint32_t size) {
+static void insert(uint8_t * & ptr, const void * data, const uint32_t size) {
     memcpy(ptr, data, size);
     ptr += size;
 }
@@ -71,13 +71,18 @@ crapjit_t::~crapjit_t() {
 
 void reloc_t::set(label_t pos) {
     assert(base_[2] == 0xbb);
-    if (type_ == RELOC_ABS) {
-        insert<label_t>(base_, pos);
+    switch (type_) {
+    case RELOC_ABS:
+      insert<label_t>(base_, pos);
+      break;
+    case RELOC_REL: {
+      const int32_t org = int32_t(base_) + 4;
+      const int32_t dst = int32_t(pos);
+      insert<int32_t>(base_, dst - org);
+      break;
     }
-    if (type_ == RELOC_REL) {
-        int32_t org = int32_t(base_) + 4;
-        int32_t dst = int32_t(pos);
-        insert<int32_t>(base_, dst - org);
+    default:
+      assert(!"unreachable");
     }
 }
 
