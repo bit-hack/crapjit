@@ -35,9 +35,21 @@ typedef uint8_t* label_t;
 
 struct reloc_t {
 
+  enum type_t {
+    INVALID,
+    RELOC_ABS,
+    RELOC_REL,
+  };
+
   reloc_t()
     : type_(INVALID)
     , base_(nullptr)
+  {
+  }
+
+  reloc_t(uint8_t *base, type_t type)
+    : base_(base)
+    , type_(type)
   {
   }
 
@@ -45,13 +57,7 @@ struct reloc_t {
   void imm_i32(int32_t);
   void imm_u32(uint32_t);
 
-  enum {
-    INVALID,
-    RELOC_ABS,
-    RELOC_REL,
-  }
-  type_;
-
+  type_t   type_;
   uint8_t* base_;
 };
 

@@ -12,6 +12,8 @@ add_library(libcj
     libcj/crapjit.h
     libcj/system.cpp
     libcj/system.h
+    libcj/runasm.h
+    libcj/runasm.cpp
 )
 
 add_executable(crapjit
