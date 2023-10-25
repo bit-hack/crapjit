@@ -5,13 +5,18 @@ if(NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -m32")
 endif()
 
-set(SOURCE_FILES
-    chunks.cpp
-    chunks.h
-    crapjit.cpp
-    crapjit.h
-    main.cpp
-    system.cpp
-    system.h)
+add_library(libcj
+    libcj/chunks.cpp
+    libcj/chunks.h
+    libcj/crapjit.cpp
+    libcj/crapjit.h
+    libcj/system.cpp
+    libcj/system.h
+)
 
-add_executable(crapjit ${SOURCE_FILES})
+add_executable(crapjit
+  main.cpp
+)
+
+target_link_libraries(crapjit libcj)
+

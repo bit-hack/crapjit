@@ -1,5 +1,5 @@
 #include <cstdio>
-#include "crapjit.h"
+#include "libcj/crapjit.h"
 
 namespace cj {
 
