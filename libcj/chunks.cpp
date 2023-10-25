@@ -1,8 +1,20 @@
+#include <cstring>
+#include <cassert>
+
 #include "chunks.h"
+
 
 namespace cj {
 
-jit_chunk_t chunk_table[] = {
+struct jit_chunk_t {
+  jit_op   op_;
+  uint32_t size_;
+  int32_t  abs_op_;
+  int32_t  rel_op_;
+  const char* data_;
+};
+
+static const jit_chunk_t chunk_table[] = {
   { ins_const   , 6 ,  1, -1,
     "\xb8\xdd\xcc\xbb\xaa"      // mov eax, 0xaabbccdd
     "\x50"                      // push eax
@@ -41,11 +53,46 @@ jit_chunk_t chunk_table[] = {
     "\x83\xe0\x01"              // and eax, 1
     "\x50"                      // push eax
   },
-  { ins_lte     , 11, -1, -1, "\x58\x5a\x39\xc2\x0f\x9e\xc0\x83\xe0\x01\x50" },
-  { ins_gt      , 11, -1, -1, "\x58\x5a\x39\xc2\x0f\x9f\xc0\x83\xe0\x01\x50" },
-  { ins_gte     , 11, -1, -1, "\x58\x5a\x39\xc2\x0f\x9d\xc0\x83\xe0\x01\x50" },
-  { ins_eq      , 11, -1, -1, "\x58\x5a\x39\xc2\x0f\x94\xc0\x83\xe0\x01\x50" },
-  { ins_neq     , 11, -1, -1, "\x58\x5a\x39\xc2\x0f\x95\xc0\x83\xe0\x01\x50" },
+  { ins_lte     , 11, -1, -1,
+    "\x58"                      // pop eax
+    "\x5a"                      // pop edx
+    "\x39\xc2"                  // cmp edx, eax
+    "\x0f\x9e\xc0"              // setl al
+    "\x83\xe0\x01"              // and eax, 1
+    "\x50"                      // push eax
+  },
+  { ins_gt      , 11, -1, -1,
+    "\x58"                      // pop eax
+    "\x5a"                      // pop edx
+    "\x39\xc2"                  // cmp edx, eax
+    "\x0f\x9f\xc0"              // setg al
+    "\x83\xe0\x01"              // and eax, 1
+    "\x50"                      // push eax
+  },
+  { ins_gte     , 11, -1, -1,
+    "\x58"                      // pop eax
+    "\x5a"                      // pop edx
+    "\x39\xc2"                  // cmp edx, eax
+    "\x0f\x9d\xc0"              // setge al
+    "\x83\xe0\x01"              // and eax, 1
+    "\x50"                      // push eax
+  },
+  { ins_eq      , 11, -1, -1,
+    "\x58"                      // pop eax
+    "\x5a"                      // pop edx
+    "\x39\xc2"                  // cmp edx, eax
+    "\x0f\x94\xc0"              // sete al
+    "\x83\xe0\x01"              // and eax, 1
+    "\x50"                      // push eax
+  },
+  { ins_neq     , 11, -1, -1,
+    "\x58"                      // pop eax
+    "\x5a"                      // pop edx
+    "\x39\xc2"                  // cmp edx, eax
+    "\x0f\x95\xc0"              // setne al
+    "\x83\xe0\x01"              // and eax, 1
+    "\x50"                      // push eax
+  },
   { ins_and     , 5 , -1, -1,
     "\x58"                      // pop eax
     "\x5a"                      // pop edx
@@ -58,9 +105,11 @@ jit_chunk_t chunk_table[] = {
     "\x09\xd0"                  // or eax, edx
     "\x50"                      // push eax
   },
-  { ins_notl    , 5 , -1, -1,
+  { ins_notl    , 10, -1, -1,
     "\x58"                      // pop eax
-    "\x83\xf0\x01"              // xor eax, 1
+    "\x85\xC0"                  // test eax, eax
+    "\x0F\x94\xC0"              // setz al
+    "\x83\xe0\x01"              // and eax, 1
     "\x50"                      // push eax
   },
   { ins_dup     , 4 , -1, -1,
@@ -104,5 +153,71 @@ jit_chunk_t chunk_table[] = {
     "\xe9\x1f\xcc\xbb\xaa"      // jmp 0xaabbccdd
   },
 };
+
+static void insert(uint8_t*& ptr, const void* data, const uint32_t size) {
+  memcpy(ptr, data, size);
+  ptr += size;
+}
+
+template <typename type_t>
+static void insert(uint8_t*& ptr, const type_t val) {
+  const uint32_t size = sizeof(type_t);
+  memcpy(ptr, &val, size);
+  ptr += size;
+}
+
+reloc_t chunk_emit(uint8_t*& ptr, jit_op op) {
+
+  const jit_chunk_t& chunk = chunk_table[op];
+
+  reloc_t reloc;
+
+  uint8_t* base = ptr;
+
+  insert(ptr, chunk.data_, chunk.size_);
+
+  // has absolute offset
+  if (chunk.abs_op_ >= 0) {
+    reloc.type_ = reloc.RELOC_ABS;
+    reloc.base_ = base += chunk.abs_op_;
+  }
+
+  // has relative offset
+  if (chunk.rel_op_ >= 0) {
+    reloc.type_ = reloc.RELOC_REL;
+    reloc.base_ = base += chunk.rel_op_;
+  }
+
+  return reloc;
+}
+
+void reloc_t::set(label_t pos) {
+  assert(base_[2] == 0xbb);
+  switch (type_) {
+  case RELOC_ABS:
+    insert<label_t>(base_, pos);
+    break;
+  case RELOC_REL: {
+    const int32_t org = int32_t(base_) + 4;
+    const int32_t dst = int32_t(pos);
+    insert<int32_t>(base_, dst - org);
+    break;
+  }
+  default:
+    assert(!"unreachable");
+  }
+}
+
+void reloc_t::imm_i32(int32_t val) {
+  assert(type_ == RELOC_ABS);
+  assert(base_[2] == 0xbb);
+  insert(base_, val);
+}
+
+void reloc_t::imm_u32(uint32_t val) {
+  assert(type_ == RELOC_ABS);
+  assert(base_[2] == 0xbb);
+  insert(base_, val);
+}
 
 }  // namespace cj

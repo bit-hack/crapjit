@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+namespace cj {
+
 enum jit_op {
     ins_const,
     ins_getl,
@@ -29,10 +31,30 @@ enum jit_op {
     ins_jmp
 };
 
-struct jit_chunk_t {
-    jit_op       op_;
-    uint32_t     size_;
-    int32_t      abs_op_;
-    int32_t      rel_op_;
-    const char * data_;
+typedef uint8_t* label_t;
+
+struct reloc_t {
+
+  reloc_t()
+    : type_(INVALID)
+    , base_(nullptr)
+  {
+  }
+
+  void set(label_t);
+  void imm_i32(int32_t);
+  void imm_u32(uint32_t);
+
+  enum {
+    INVALID,
+    RELOC_ABS,
+    RELOC_REL,
+  }
+  type_;
+
+  uint8_t* base_;
 };
+
+reloc_t chunk_emit(uint8_t*& ptr, jit_op op);
+
+}  // namespace cj

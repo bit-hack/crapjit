@@ -6,30 +6,6 @@
 
 namespace cj {
 
-typedef uint8_t* label_t;
-
-struct reloc_t {
-
-  reloc_t()
-    : type_(INVALID)
-    , base_(nullptr)
-  {
-  }
-
-  void set(label_t);
-  void imm_i32(int32_t);
-  void imm_u32(uint32_t);
-
-  enum {
-    INVALID,
-    RELOC_ABS,
-    RELOC_REL,
-  }
-  type_;
-
-  uint8_t* base_;
-};
-
 struct ir_t {
 
   enum type_t {
@@ -133,7 +109,6 @@ struct crapjit_t {
 
 protected:
     ir_t& _push(const ir_t& inst);
-    reloc_t _emit_inst(uint8_t*& ptr, jit_op op);
 
     std::list<ir_t> ir;
 

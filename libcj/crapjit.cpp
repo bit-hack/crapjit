@@ -47,80 +47,12 @@ static jit_op inst_type(ir_t::type_t type) {
   }
 }
 
-extern jit_chunk_t chunk_table[];
-
-template <typename type_t>
-static void insert(uint8_t * & ptr, const type_t val) {
-    const uint32_t size = sizeof(type_t);
-    memcpy(ptr, &val, size);
-    ptr += size;
-}
-
-static void insert(uint8_t * & ptr, const void * data, const uint32_t size) {
-    memcpy(ptr, data, size);
-    ptr += size;
-}
-
 crapjit_t::crapjit_t() {
     data_ = head_ = (uint8_t*)code_alloc(1024 * 512);
 }
 
 crapjit_t::~crapjit_t() {
     code_free(data_);
-}
-
-void reloc_t::set(label_t pos) {
-    assert(base_[2] == 0xbb);
-    switch (type_) {
-    case RELOC_ABS:
-      insert<label_t>(base_, pos);
-      break;
-    case RELOC_REL: {
-      const int32_t org = int32_t(base_) + 4;
-      const int32_t dst = int32_t(pos);
-      insert<int32_t>(base_, dst - org);
-      break;
-    }
-    default:
-      assert(!"unreachable");
-    }
-}
-
-void reloc_t::imm_i32(int32_t val) {
-    assert(type_ == RELOC_ABS);
-    assert(base_[2] == 0xbb);
-    insert(base_, val);
-}
-
-void reloc_t::imm_u32(uint32_t val) {
-    assert(type_ == RELOC_ABS);
-    assert(base_[2] == 0xbb);
-    insert(base_, val);
-}
-
-reloc_t crapjit_t::_emit_inst(uint8_t * & ptr, jit_op op) {
-
-    const jit_chunk_t & chunk = chunk_table[op];
-
-    reloc_t reloc;
-
-    uint8_t *base = ptr;
-
-    insert(ptr, chunk.data_, chunk.size_);
-
-    // has absolute offset
-    if (chunk.abs_op_ >= 0) {
-        reloc.type_ = reloc.RELOC_ABS;
-        reloc.base_ = base += chunk.abs_op_;
-    }
-
-    // has relative offset
-    if (chunk.rel_op_ >= 0) {
-        reloc.type_ = reloc.RELOC_REL;
-        reloc.base_ = base += chunk.rel_op_;
-    }
-
-    return reloc;
 }
 
 void crapjit_t::emit_const(int32_t val) {
@@ -247,7 +179,7 @@ void* crapjit_t::finish() {
     }
 
     jit_op op = inst_type(i.type);
-    reloc_t reloc = _emit_inst(head_, op);
+    reloc_t reloc = chunk_emit(head_, op);
 
     switch (i.type) {
     case ir_t::IR_CONST:

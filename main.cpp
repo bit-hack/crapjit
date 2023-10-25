@@ -156,6 +156,43 @@ static bool test_mul() {
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
+static bool test_notl() {
+  banner(__func__);
+
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)();
+
+  uint32_t resa, resb, resc;
+  {
+    crapjit_t j;
+    j.emit_frame(0);
+    j.emit_const(1);
+    j.emit_notl();
+    j.emit_return(0);
+    resa = ((jitfunc_t)j.finish())();
+  }
+  {
+    crapjit_t j;
+    j.emit_frame(0);
+    j.emit_const(0);
+    j.emit_notl();
+    j.emit_return(0);
+    resb = ((jitfunc_t)j.finish())();
+  }
+  {
+    crapjit_t j;
+    j.emit_frame(0);
+    j.emit_const(2);
+    j.emit_notl();
+    j.emit_return(0);
+    resc = ((jitfunc_t)j.finish())();
+  }
+
+  return 0 == resa && 1 == resb && 0 == resc;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 static bool test_jmp() {
   banner(__func__);
 
@@ -167,11 +204,11 @@ static bool test_jmp() {
   crapjit_t j;
             j.emit_frame(0);
   ir_t &L = j.emit_jmp();           // taken ----.
-            j.emit_const(0xdead);   // fail      |
-            j.emit_return(0);       // XXXXXXXXX |
+            j.emit_const(0xdead);   //           |
+            j.emit_return(0);       // XXXXXXXXXX|XXXXX FAIL
   L.target( j.emit_label() );       // <---------'
-            j.emit_const(0xbeef);   // pass
-            j.emit_return(0);       // XXXXXXXXX
+            j.emit_const(0xbeef);   //
+            j.emit_return(0);       // XXXXXXXXXXXXXXXX PASS
 
   jitfunc_t f = (jitfunc_t)j.finish();
   const uint32_t ret = f();
@@ -353,8 +390,32 @@ static bool test_dup() {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-// test loops
-// have an increment loop (for i = 0 to 10) sort of thing
+static bool test_loop_1() {
+  banner(__func__);
+
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)();
+
+  crapjit_t j;
+             j.emit_frame(0);     //
+             j.emit_const(10);    //
+  auto& J0 = j.emit_jmp();        // -------.
+  auto& L0 = j.emit_label();      // <----. |
+             j.emit_const(1);     //      | |
+             j.emit_sub();        //      | |
+  auto& L1 = j.emit_label();      // <----|-'
+             j.emit_dup();        //      |
+  auto& J1 = j.emit_jnz();        // -----'
+             j.emit_return(0);    //
+
+  J0.target(L1);
+  J1.target(L0);
+
+  jitfunc_t f = (jitfunc_t)j.finish();
+  const uint32_t ret = f();
+
+  return 0 == ret;
+}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -377,6 +438,74 @@ static bool test_locals() {
 
   const uint32_t ret = f();
   return 0xc0ffee == ret;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+static bool test_call_1() {
+  banner(__func__);
+
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)();
+
+  crapjit_t j;
+
+            // function 1
+            j.emit_frame(0);
+  auto& J = j.emit_call();
+            j.emit_const(1);
+            j.emit_add();
+            j.emit_return(0);
+
+            // function 2
+  auto& L = j.emit_label();
+            j.emit_frame(0);
+            j.emit_const(0xcafef00c);
+            j.emit_return(0);
+
+  J.target(L);
+
+  jitfunc_t f = (jitfunc_t)j.finish();
+
+  const uint32_t ret = f();
+  return 0xcafef00d == ret;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+static bool test_call_2() {
+  banner(__func__);
+
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)();
+
+  crapjit_t j;
+
+  // test calls with backwards labels
+
+  auto& T = j.emit_jmp();
+
+            // function 2
+  auto& L = j.emit_label();
+            j.emit_frame(0);
+            j.emit_const(0xcafef00c);
+            j.emit_return(0);
+
+            // function 1
+  auto& S = j.emit_label();
+            j.emit_frame(0);
+  auto& J = j.emit_call();
+            j.emit_const(1);
+            j.emit_add();
+            j.emit_return(0);
+
+  T.target(S);
+  J.target(L);
+
+  jitfunc_t f = (jitfunc_t)j.finish();
+
+  const uint32_t ret = f();
+  return 0xcafef00d == ret;
 }
 
 // ----------------------------------------------------------------------------
@@ -445,15 +574,19 @@ static const test_t tests[] = {
   test_and,
   test_or,
   test_mul,
+  test_notl,
   test_jmp,
   test_jz,
   test_jnz,
   test_drop,
   test_dup,
+  test_loop_1,
   test_args_1,
   test_args_2,
   test_frame,
   test_locals,
+  test_call_1,
+  test_call_2,
   test_factoral,
   nullptr
 };
