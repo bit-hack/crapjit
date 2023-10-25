@@ -34,7 +34,7 @@ static jit_op inst_type(ir_t::type_t type) {
   case ir_t::IR_DIV:    return ins_div;
   case ir_t::IR_AND:    return ins_and;
   case ir_t::IR_OR:     return ins_or;
-  case ir_t::IR_NOT:    return ins_notl;
+  case ir_t::IR_NOTL:   return ins_notl;
   case ir_t::IR_LT:     return ins_lt;
   case ir_t::IR_LEQ:    return ins_lte;
   case ir_t::IR_GT:     return ins_gt;
@@ -127,8 +127,8 @@ void crapjit_t::emit_const(int32_t val) {
     _push(ir_t{ ir_t::IR_CONST, uint32_t(val) });
 }
 
-void crapjit_t::emit_drop() {
-    _push(ir_t{ ir_t::IR_DROP });
+void crapjit_t::emit_drop(uint32_t count) {
+    _push(ir_t{ ir_t::IR_DROP, count*4 });
 }
 
 void crapjit_t::emit_dup() {
@@ -147,12 +147,12 @@ void crapjit_t::emit_setl(int32_t offs) {
     _push(ir_t{ ir_t::IR_SETL, uint32_t(offs*4) });
 }
 
-void crapjit_t::emit_frame(uint32_t val) {
-    _push(ir_t{ ir_t::IR_FRAME, val });
+void crapjit_t::emit_frame(uint32_t offs) {
+    _push(ir_t{ ir_t::IR_FRAME, uint32_t(offs*4) });
 }
 
-void crapjit_t::emit_return(uint32_t val) {
-    _push(ir_t{ ir_t::IR_RETURN, val });
+void crapjit_t::emit_return(uint32_t offs) {
+    _push(ir_t{ ir_t::IR_RETURN, uint32_t(offs * 4) });
 }
 
 ir_t &crapjit_t::emit_call() {
@@ -197,6 +197,10 @@ void crapjit_t::emit_and() {
 
 void crapjit_t::emit_or() {
     _push(ir_t{ ir_t::IR_OR });
+}
+
+void crapjit_t::emit_notl() {
+    _push(ir_t{ ir_t::IR_NOTL });
 }
 
 void crapjit_t::emit_lt() {
@@ -254,6 +258,7 @@ void* crapjit_t::finish() {
     case ir_t::IR_SINK:
     case ir_t::IR_FRAME:
     case ir_t::IR_RETURN:
+    case ir_t::IR_DROP:
       reloc.imm_u32(i._imm);
       break;
     case ir_t::IR_JZ:

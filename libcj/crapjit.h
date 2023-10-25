@@ -52,7 +52,7 @@ struct ir_t {
     IR_DIV,
     IR_AND,
     IR_OR,
-    IR_NOT,
+    IR_NOTL,
     IR_LT,
     IR_LEQ,
     IR_GT,
@@ -95,7 +95,7 @@ struct crapjit_t {
     ~crapjit_t();
 
     void    emit_const  (int32_t);
-    void    emit_drop   ();
+    void    emit_drop   (uint32_t);
     void    emit_dup    ();
     void    emit_sink   (uint32_t);
 
@@ -106,7 +106,7 @@ struct crapjit_t {
     void    emit_return (uint32_t);
 
     ir_t&   emit_call   ();
-    
+
     ir_t&   emit_jz     ();
     ir_t&   emit_jnz    ();
     ir_t&   emit_jmp    ();
@@ -120,7 +120,7 @@ struct crapjit_t {
 
     void    emit_and    ();
     void    emit_or     ();
-    void    emit_not    ();
+    void    emit_notl   ();
 
     void    emit_lt     ();
     void    emit_leq    ();

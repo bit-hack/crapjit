@@ -30,9 +30,9 @@ enum jit_op {
 };
 
 struct jit_chunk_t {
-    jit_op op_;
-    uint32_t size_;
-    int32_t abs_op_;
-    int32_t rel_op_;
+    jit_op       op_;
+    uint32_t     size_;
+    int32_t      abs_op_;
+    int32_t      rel_op_;
     const char * data_;
 };

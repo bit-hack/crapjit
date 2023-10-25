@@ -1,5 +1,8 @@
 #if defined(_MSC_VER)
 #include <Windows.h>
+
+#include <cassert>
+
 #include "system.h"
 
 extern void * code_alloc(uint32_t size) {
@@ -7,6 +10,7 @@ extern void * code_alloc(uint32_t size) {
 }
 
 extern void code_free(void *ptr) {
+    assert(ptr);
     VirtualFree(ptr, 0, MEM_RELEASE);
 }
 #else

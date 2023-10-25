@@ -128,7 +128,7 @@ ins_sink:
     pop  eax
     add  esp, 0xaabbccdd;
     push eax;
-    
+
 ; ---- setup stack frame
 ins_frame:
     push ebp;                       save base pointer
