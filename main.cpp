@@ -82,7 +82,7 @@ static bool test_sub() {
   j.emit_frame(0);
   j.emit_const(1234);
   j.emit_const(11);
-  j.emit_sub();
+  j.emit_sub();         // 1234 - 11
   j.emit_return(0);
 
   jitfunc_t f = (jitfunc_t)j.finish();
@@ -152,6 +152,177 @@ static bool test_mul() {
   const uint32_t ret = f();
 
   return 60 == ret;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+static bool test_div() {
+  banner(__func__);
+
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(100);
+  j.emit_const(5);
+  j.emit_div();
+  j.emit_return(0);
+
+  jitfunc_t f = (jitfunc_t)j.finish();
+  const uint32_t ret = f();
+
+  return 20 == ret;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_lt_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_lt();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_lt() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_lt_impl(0, 1) == 1;
+       ok &= test_lt_impl(1, 0) == 0;
+       ok &= test_lt_impl(1, 1) == 0;
+  return ok;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_lte_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_leq();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_lte() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_lte_impl(0, 1) == 1;
+       ok &= test_lte_impl(1, 0) == 0;
+       ok &= test_lte_impl(1, 1) == 1;
+  return ok;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_gt_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_gt();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_gt() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_gt_impl(0, 1) == 0;
+       ok &= test_gt_impl(1, 0) == 1;
+       ok &= test_gt_impl(1, 1) == 0;
+  return ok;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_geq_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_geq();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_geq() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_geq_impl(0, 1) == 0;
+       ok &= test_geq_impl(1, 0) == 1;
+       ok &= test_geq_impl(1, 1) == 1;
+  return ok;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_eq_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_eq();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_eq() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_eq_impl(0, 1) == 0;
+       ok &= test_eq_impl(1, 0) == 0;
+       ok &= test_eq_impl(1, 1) == 1;
+  return ok;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+static uint32_t test_neq_impl(uint32_t lhs, uint32_t rhs) {
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  crapjit_t j;
+  j.emit_frame(0);
+  j.emit_const(lhs);
+  j.emit_const(rhs);
+  j.emit_neq();
+  j.emit_return(0);
+  return jitfunc_t(j.finish())();
+}
+
+static bool test_neq() {
+  banner(__func__);
+  using namespace cj;
+  typedef uint32_t(*jitfunc_t)(void);
+  bool ok  = test_neq_impl(0, 1) == 1;
+       ok &= test_neq_impl(1, 0) == 1;
+       ok &= test_neq_impl(1, 1) == 0;
+  return ok;
 }
 
 // ----------------------------------------------------------------------------
@@ -574,10 +745,17 @@ static const test_t tests[] = {
   test_and,
   test_or,
   test_mul,
+//  test_div,
   test_notl,
   test_jmp,
   test_jz,
   test_jnz,
+  test_lt,
+  test_lte,
+  test_gt,
+  test_geq,
+  test_eq,
+  test_neq,
   test_drop,
   test_dup,
   test_loop_1,

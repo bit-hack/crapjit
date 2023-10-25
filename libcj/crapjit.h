@@ -3,6 +3,7 @@
 #include <list>
 
 #include "chunks.h"
+#include "runasm.h"
 
 namespace cj {
 
@@ -112,8 +113,7 @@ protected:
 
     std::list<ir_t> ir;
 
-    uint8_t *data_;
-    uint8_t *head_;
+    uint8_t *code_;
 };
 
 }  // namespace cj

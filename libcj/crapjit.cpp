@@ -6,12 +6,6 @@
 #include "system.h"
 
 
-#if defined(_MSC_VER)
-#define assert(X) { if (!(X)) __debugbreak(); }
-#else
-#include <cassert>
-#endif
-
 namespace cj {
 
 static jit_op inst_type(ir_t::type_t type) {
@@ -47,12 +41,14 @@ static jit_op inst_type(ir_t::type_t type) {
   }
 }
 
-crapjit_t::crapjit_t() {
-    data_ = head_ = (uint8_t*)code_alloc(1024 * 512);
+crapjit_t::crapjit_t()
+  : code_(nullptr)
+{
+    code_ = (uint8_t*)code_alloc(1024 * 512);
 }
 
 crapjit_t::~crapjit_t() {
-    code_free(data_);
+    code_free(code_);
 }
 
 void crapjit_t::emit_const(int32_t val) {
@@ -168,18 +164,18 @@ void* crapjit_t::finish() {
   std::map<const ir_t*, label_t> labels;
   std::map<const ir_t*, reloc_t> relocs;
 
-  head_ = data_;
+  runasm::runasm_t x86{ code_, 1024 };
 
   // emit instruction stream
   for (const auto& i : ir) {
 
     if (i.type == ir_t::IR_LABEL) {
-      labels[&i] = head_;
+      labels[&i] = x86.head();
       continue;
     }
 
     jit_op op = inst_type(i.type);
-    reloc_t reloc = chunk_emit(head_, op);
+    reloc_t reloc = chunk_emit(x86, op);
 
     switch (i.type) {
     case ir_t::IR_CONST:
@@ -211,7 +207,7 @@ void* crapjit_t::finish() {
     rel.set(ptr);
   }
 
-  return data_;
+  return code_;
 }
 
 }  // namespace cj

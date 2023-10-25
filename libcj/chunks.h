@@ -1,6 +1,8 @@
 #pragma once
 #include <stdint.h>
 
+#include "runasm.h"
+
 namespace cj {
 
 enum jit_op {
@@ -61,6 +63,6 @@ struct reloc_t {
   uint8_t* base_;
 };
 
-reloc_t chunk_emit(uint8_t*& ptr, jit_op op);
+reloc_t chunk_emit(runasm::runasm_t &x86, jit_op op);
 
 }  // namespace cj

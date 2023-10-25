@@ -48,13 +48,13 @@ void runasm_t::setTarget(rel32_t j32, label_t target) {
 }
 
 void runasm_t::setTarget(rel8_t j8) {
-  uint32_t jump = (ptr - (int8_t *)j8) - 1;
+  uint32_t jump = ((int8_t*)ptr - (int8_t *)j8) - 1;
   assert(jump <= 0x7f);
   *j8 = (uint8_t)jump;
 }
 
 void runasm_t::setTarget(rel32_t j32) {
-  *j32 = (ptr - (int8_t *)j32) - 4;
+  *j32 = ((int8_t*)ptr - (int8_t *)j32) - 4;
 }
 
 void runasm_t::setTarget(std::initializer_list<rel32_t> branches,
@@ -74,7 +74,7 @@ void runasm_t::setTarget(std::initializer_list<rel8_t> branches,
 }
 
 void runasm_t::align(int32_t bytes) {
-  ptr = (int8_t *)(((uintptr_t)ptr + bytes) & ~(bytes - 1));
+  ptr = (uint8_t *)(((uintptr_t)ptr + bytes) & ~(bytes - 1));
   assert(ptr <= end);
 }
 
@@ -132,8 +132,7 @@ void runasm_t::MOV(gp_reg32_t dst, mem32_t src) {
   write32(src);
 }
 
-void runasm_t::MOV(gp_reg32_t dst,
-                   deref_t src) {
+void runasm_t::MOV(gp_reg32_t dst, deref_t src) {
   write8(0x8B);
   assert(src.is_reg());
   if (src.reg == ESP) {
@@ -155,8 +154,7 @@ void runasm_t::MOV(gp_reg32_t dst, sib_t src) {
   modRMSibSB(dst, src);
 }
 
-void runasm_t::MOV(deref_t dst,
-                   gp_reg32_t src) {
+void runasm_t::MOV(deref_t dst, gp_reg32_t src) {
   write8(0x89);
   assert(dst.is_reg());
   if (dst.reg == ESP) {
@@ -173,8 +171,7 @@ void runasm_t::MOV(deref_t dst,
   }
 }
 
-void runasm_t::MOV(sib_t dst,
-                   gp_reg32_t src) {
+void runasm_t::MOV(sib_t dst, gp_reg32_t src) {
   write8(0x89);
   modRMSibSB(src, dst);
 }
@@ -347,6 +344,23 @@ void runasm_t::ADD(gp_reg32_t dst, mem32_t src) {
   write32(src);
 }
 
+void runasm_t::ADD(deref_t dst, gp_reg32_t src) {
+  write8(0x01);
+  assert(dst.is_reg());
+  if (dst.reg == ESP) {
+    // special case with SIB byte
+    modRMSibSB(src, sib_t(1, dst.disp32, dst.reg));
+  }
+  else {
+    if (dst.disp32) {
+      modRM(2, src, dst.reg);
+      write32(dst.disp32);
+    } else {
+      modRM(0, src, dst.reg);
+    }
+  }
+}
+
 // add with carry instructions
 
 void runasm_t::ADC(gp_reg32_t dst, uint32_t src) {
@@ -406,6 +420,24 @@ void runasm_t::SUB(gp_reg32_t dst, mem32_t src) {
   write8(0x2B);
   modRM(0, dst, DISP32);
   write32(src);
+}
+
+void runasm_t::SUB(deref_t dst, gp_reg32_t src) {
+  write8(0x29);
+  assert(dst.is_reg());
+  if (dst.reg == ESP) {
+    // special case with SIB byte
+    modRMSibSB(src, sib_t(1, dst.disp32, dst.reg));
+  }
+  else {
+    if (dst.disp32) {
+      modRM(2, src, dst.reg);
+      write32(dst.disp32);
+    }
+    else {
+      modRM(0, src, dst.reg);
+    }
+  }
 }
 
 // subtract with borrow instructions
@@ -848,7 +880,7 @@ void runasm_t::TEST(gp_reg32_t dst, gp_reg32_t src) {
 
 void runasm_t::SET(cc_t cc, gp_reg32_t dst) {
   write8(0x0F);
-  write8(cc);
+  write8(0x90 | cc);
   write8(0xC0 | dst);
 }
 
@@ -910,24 +942,6 @@ void runasm_t::POPA() {
 
 void runasm_t::RET() {
   write8(0xC3);
-}
-
-void runasm_t::_mm_add_ps(xmm_reg_t dst, xmm_reg_t src) {
-  write8(0x0f);
-  write8(0x58);
-  modRM(0x3, src, dst);
-}
-
-void runasm_t::_mm_sub_ps(xmm_reg_t dst, xmm_reg_t src) {
-  write8(0x0f);
-  write8(0x5c);
-  modRM(0x3, src, dst);
-}
-
-void runasm_t::_mm_mul_ps(xmm_reg_t dst, xmm_reg_t src) {
-  write8(0x0f);
-  write8(0x59);
-  modRM(0x3, src, dst);
 }
 
 } // namespace runasm

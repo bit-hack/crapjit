@@ -64,18 +64,6 @@ enum gp_reg32_t {
   EDI = 7,
 };
 
-// xmm regs
-enum xmm_reg_t {
-  XMM0 = 0,
-  XMM1 = 1,
-  XMM2 = 2,
-  XMM3 = 3,
-  XMM4 = 4,
-  XMM5 = 5,
-  XMM6 = 6,
-  XMM7 = 7,
-};
-
 enum cc_t {
   CC_O  = 0x0, // overflow         JO    (OF=1)
   CC_NO = 0x1, // not overflow     JNO   (OF=0)
@@ -96,9 +84,9 @@ enum cc_t {
 };
 
 // helper types
-typedef uint8_t *rel8_t;
+typedef uint8_t  *rel8_t;
 typedef uint32_t *rel32_t;
-typedef uint8_t *mem8_t;
+typedef uint8_t  *mem8_t;
 typedef uint16_t *mem16_t;
 typedef uint32_t *mem32_t;
 
@@ -193,16 +181,24 @@ struct sib_t {
 struct runasm_t {
 
   // construct with target code buffer
-  runasm_t(void *dst, size_t size)
-      : start((int8_t *)dst)
-      , ptr((int8_t *)dst)
-      , end((int8_t *)dst + size) {
+  runasm_t(uint8_t *dst, size_t size)
+      : start(dst)
+      , ptr  (dst)
+      , end  (dst + size) {
     assert(dst);
   }
 
   // return pointer to the code buffer
   uint8_t *code() const {
-    return (uint8_t *)start;
+    return start;
+  }
+
+  uint8_t* head() const {
+    return ptr;
+  }
+
+  uint8_t*& pointer() {  // XXX: remove me!!
+    return ptr;
   }
 
   // reset the instruction stream
@@ -297,6 +293,8 @@ struct runasm_t {
   void ADD(mem32_t dst, gp_reg32_t src);
   // add m32 to r32
   void ADD(gp_reg32_t dst, mem32_t src);
+  // add [r32 + disp32], r32
+  void ADD(deref_t dst, gp_reg32_t src);
 
   // adc imm32 to r32
   void ADC(gp_reg32_t dst, uint32_t src);
@@ -316,6 +314,8 @@ struct runasm_t {
   void SUB(gp_reg32_t dst, gp_reg32_t src);
   // sub m32 to r32
   void SUB(gp_reg32_t dst, mem32_t src);
+  // sub [r32 + disp32], r32
+  void SUB(deref_t dst, gp_reg32_t src);
 
   // sbb imm32 to r32
   void SBB(gp_reg32_t dst, uint32_t src);
@@ -479,22 +479,13 @@ struct runasm_t {
   // return
   void RET();
 
-  // add packed single precision float
-  void _mm_add_ps(xmm_reg_t dst, xmm_reg_t src);
-
-  // subtract packed single precision float
-  void _mm_sub_ps(xmm_reg_t dst, xmm_reg_t src);
-
-  // multiply packed scalar
-  void _mm_mul_ps(xmm_reg_t dst, xmm_reg_t src);
-
 protected:
   void modRM(int32_t mod, int32_t rm, int32_t reg);
   void modRMSibSB(int32_t reg, const sib_t &sib);
 
-  int8_t *start;
-  int8_t *ptr;
-  const int8_t *end;
+  uint8_t *start;
+  uint8_t *ptr;
+  const uint8_t *end;
 
 }; // struct runasm_t
 
