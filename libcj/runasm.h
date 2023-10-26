@@ -182,9 +182,11 @@ struct runasm_t {
 
   // construct with target code buffer
   runasm_t(uint8_t *dst, size_t size)
-      : start(dst)
-      , ptr  (dst)
-      , end  (dst + size) {
+    : start   (dst)
+    , ptr     (dst)
+    , end     (dst + size)
+    , peepCeil(dst)
+  {
     assert(dst);
   }
 
@@ -197,20 +199,17 @@ struct runasm_t {
     return ptr;
   }
 
-  uint8_t*& pointer() {  // XXX: remove me!!
-    return ptr;
-  }
-
   // reset the instruction stream
   void reset() {
     ptr = start;
   }
 
   // write value to code buffer
-  void write8(const uint8_t val);
+  void write8 (const uint8_t val);
   void write16(const uint16_t val);
   void write32(const uint32_t val);
   void write32(void *val);
+  void write  (const void *data, size_t count);
 
   // set jump target
   void setTarget(rel8_t op);
@@ -225,6 +224,10 @@ struct runasm_t {
 
   // return a label at this point in the code stream
   label_t label() const;
+
+  // --------------------------------------------------------------------------
+  // mov instructions
+  // --------------------------------------------------------------------------
 
   // mov r32, r32
   void MOV(gp_reg32_t dst, gp_reg32_t src);
@@ -260,6 +263,10 @@ struct runasm_t {
   // mov imm8 to m8
   void MOV(mem8_t dst, uint8_t src);
 
+  // --------------------------------------------------------------------------
+  // mov sign extend
+  // --------------------------------------------------------------------------
+
   // mov sign extend r8 to r32
   void MOVSX(gp_reg32_t dst, gp_reg8_t src);
   // mov sign extend m8 to r32
@@ -268,6 +275,10 @@ struct runasm_t {
   void MOVSX(gp_reg32_t dst, gp_reg16_t src);
   // mov sign extend m16 to r32
   void MOVSX(gp_reg32_t dst, mem16_t src);
+
+  // --------------------------------------------------------------------------
+  // mov zero extend
+  // --------------------------------------------------------------------------
 
   // mov zero extend r8 to r32
   void MOVZX(gp_reg32_t dst, gp_reg8_t src);
@@ -278,10 +289,18 @@ struct runasm_t {
   // mov zero extend m16 to r32
   void MOVZX(gp_reg32_t dst, mem16_t src);
 
+  // --------------------------------------------------------------------------
+  // conditional move instructions
+  // --------------------------------------------------------------------------
+
   // conditional move
   void CMOV(cc_t cc, gp_reg32_t dst, gp_reg32_t src);
   // conditional move
   void CMOV(cc_t cc, gp_reg32_t dst, mem32_t src);
+
+  // --------------------------------------------------------------------------
+  // addition
+  // --------------------------------------------------------------------------
 
   // add imm32 to r32
   void ADD(gp_reg32_t dst, uint32_t src);
@@ -296,6 +315,10 @@ struct runasm_t {
   // add [r32 + disp32], r32
   void ADD(deref_t dst, gp_reg32_t src);
 
+  // --------------------------------------------------------------------------
+  // add with carry
+  // --------------------------------------------------------------------------
+
   // adc imm32 to r32
   void ADC(gp_reg32_t dst, uint32_t src);
   // adc r32 to r32
@@ -303,10 +326,18 @@ struct runasm_t {
   // adc m32 to r32
   void ADC(gp_reg32_t dst, mem32_t src);
 
+  // --------------------------------------------------------------------------
+  // increment
+  // --------------------------------------------------------------------------
+
   // inc r32
   void INC(gp_reg32_t dst);
   // inc m32
   void INC(mem32_t dst);
+
+  // --------------------------------------------------------------------------
+  // subtract
+  // --------------------------------------------------------------------------
 
   // sub imm32 to r32
   void SUB(gp_reg32_t dst, uint32_t src);
@@ -317,6 +348,10 @@ struct runasm_t {
   // sub [r32 + disp32], r32
   void SUB(deref_t dst, gp_reg32_t src);
 
+  // --------------------------------------------------------------------------
+  // subtract with borrow
+  // --------------------------------------------------------------------------
+
   // sbb imm32 to r32
   void SBB(gp_reg32_t dst, uint32_t src);
   // sbb r32 to r32
@@ -324,15 +359,27 @@ struct runasm_t {
   // sbb m32 to r32
   void SBB(gp_reg32_t dst, mem32_t src);
 
+  // --------------------------------------------------------------------------
+  // decrement
+  // --------------------------------------------------------------------------
+
   // dec r32
   void DEC(gp_reg32_t dst);
   // dec m32
   void DEC(mem32_t dst);
 
+  // --------------------------------------------------------------------------
+  // multiply
+  // --------------------------------------------------------------------------
+
   // mul eax by r32 to edx:eax
   void MUL(gp_reg32_t src);
   // mul eax by m32 to edx:eax
   void MUL(mem32_t src);
+
+  // --------------------------------------------------------------------------
+  // integer multiply
+  // --------------------------------------------------------------------------
 
   // imul eax by r32 to edx:eax
   void IMUL(gp_reg32_t src);
@@ -341,33 +388,61 @@ struct runasm_t {
   // imul r32 by r32 to r32
   void IMUL(gp_reg32_t dst, gp_reg32_t src);
 
+  // --------------------------------------------------------------------------
+  // divide
+  // --------------------------------------------------------------------------
+
   // div eax by r32 to edx:eax
   void DIV(gp_reg32_t src);
   // div eax by m32 to edx:eax
   void DIV(mem32_t src);
+
+  // --------------------------------------------------------------------------
+  // integer divide
+  // --------------------------------------------------------------------------
 
   // idiv eax by r32 to edx:eax
   void IDIV(gp_reg32_t src);
   // idiv eax by m32 to edx:eax
   void IDIV(mem32_t src);
 
+  // --------------------------------------------------------------------------
+  // rotate carry right
+  // --------------------------------------------------------------------------
+
   // rotate carry right
   void RCR(int32_t dst, int32_t src);
+
+  // --------------------------------------------------------------------------
+  // shift lefy
+  // --------------------------------------------------------------------------
 
   // shl imm8 to r32
   void SHL(gp_reg32_t dst, uint8_t src);
   // shl cl to r32
   void SHL(gp_reg32_t dst);
 
+  // --------------------------------------------------------------------------
+  // shift right
+  // --------------------------------------------------------------------------
+
   // shr imm8 to r32
   void SHR(gp_reg32_t dst, uint8_t src);
   // shr cl to r32
   void SHR(gp_reg32_t dst);
 
+  // --------------------------------------------------------------------------
+  // shift right arithmetic
+  // --------------------------------------------------------------------------
+
   // sar imm8 to r32
   void SAR(gp_reg32_t dst, uint8_t src);
   // sar cl to r32
   void SAR(gp_reg32_t dst);
+
+  // --------------------------------------------------------------------------
+  // bitwise or
+  // --------------------------------------------------------------------------
 
   // or imm32 to r32
   void OR(gp_reg32_t dst, uint32_t src);
@@ -380,6 +455,10 @@ struct runasm_t {
   // or m32 to r32
   void OR(gp_reg32_t dst, mem32_t src);
 
+  // --------------------------------------------------------------------------
+  // bitwise exclusive or
+  // --------------------------------------------------------------------------
+
   // xor imm32 to r32
   void XOR(gp_reg32_t dst, uint32_t src);
   // xor imm32 to m32
@@ -390,6 +469,10 @@ struct runasm_t {
   void XOR(mem32_t dst, gp_reg32_t src);
   // xor m32 to r32
   void XOR(gp_reg32_t dst, mem32_t src);
+
+  // --------------------------------------------------------------------------
+  // bitwise and
+  // --------------------------------------------------------------------------
 
   // and imm32 to r32
   void AND(gp_reg32_t dst, uint32_t src);
@@ -402,20 +485,37 @@ struct runasm_t {
   // and m32 to r32
   void AND(gp_reg32_t dst, mem32_t src);
 
+  // --------------------------------------------------------------------------
+  // bitwise not
+  // --------------------------------------------------------------------------
+
   // not r32
   void NOT(gp_reg32_t src);
   // neg r32
   void NEG(gp_reg32_t src);
 
+  // --------------------------------------------------------------------------
   // no operation
+  // --------------------------------------------------------------------------
+
   void NOP();
 
+  // --------------------------------------------------------------------------
   // debug breakpoint
+  // --------------------------------------------------------------------------
+
   void INT3();
 
+  // --------------------------------------------------------------------------
   // conditional jump
-  rel8_t Jcc8(cc_t cc, label_t to = label_t());
+  // --------------------------------------------------------------------------
+
+  rel8_t  Jcc8 (cc_t cc, label_t to = label_t());
   rel32_t Jcc32(cc_t cc, label_t to = label_t());
+
+  // --------------------------------------------------------------------------
+  // unconditional jump
+  // --------------------------------------------------------------------------
 
   // jmp rel8
   rel8_t JMP8(label_t to = label_t());
@@ -423,6 +523,10 @@ struct runasm_t {
   rel32_t JMP32(label_t to = label_t());
   // jmp r32
   void JMP(gp_reg32_t to);
+
+  // --------------------------------------------------------------------------
+  // procedure call
+  // --------------------------------------------------------------------------
 
   // call near, relative, displacement relative to next instruction
   void CALL(void *func);
@@ -434,8 +538,15 @@ struct runasm_t {
   // XXX: (mem32_t *to)
   void CALL_32M(void *to);
 
+  // --------------------------------------------------------------------------
   // bit test
+  // --------------------------------------------------------------------------
+
   void BT(gp_reg32_t dst, int32_t src);
+
+  // --------------------------------------------------------------------------
+  // compare
+  // --------------------------------------------------------------------------
 
   // cmp imm32 to r32
   void CMP(gp_reg32_t lhs, uint32_t rhs);
@@ -446,13 +557,25 @@ struct runasm_t {
   // cmp m32 to r32
   void CMP(gp_reg32_t lhs, mem32_t rhs);
 
+  // --------------------------------------------------------------------------
+  // test
+  // --------------------------------------------------------------------------
+
   // test imm32 to r32
   void TEST(gp_reg32_t dst, uint32_t src);
   // test r32 to r32
   void TEST(gp_reg32_t dst, gp_reg32_t src);
 
+  // --------------------------------------------------------------------------
+  // conditional set
+  // --------------------------------------------------------------------------
+
   // set byte on condition
   void SET(cc_t cc, gp_reg32_t dst);
+
+  // --------------------------------------------------------------------------
+  // data conversion
+  // --------------------------------------------------------------------------
 
   // convert byte to word
   void CBW();
@@ -461,6 +584,10 @@ struct runasm_t {
   // convert doubleword to quadword
   void CDQ();
 
+  // --------------------------------------------------------------------------
+  // stack push
+  // --------------------------------------------------------------------------
+
   // push r32 to stack
   void PUSH(gp_reg32_t src);
   // push m32 to stack
@@ -468,13 +595,22 @@ struct runasm_t {
   // push imm32 to stack
   void PUSH(uint32_t src);
 
+  // push All General-Purpose Registers
+  void PUSHA();
+
+  // --------------------------------------------------------------------------
+  // stack pop
+  // --------------------------------------------------------------------------
+
   // pop r32 from stack
   void POP(gp_reg32_t src);
 
-  // push All General-Purpose Registers
-  void PUSHA();
   // pop All General-Purpose Registers
   void POPA();
+
+  // --------------------------------------------------------------------------
+  // return from procedure
+  // --------------------------------------------------------------------------
 
   // return
   void RET();
@@ -483,9 +619,25 @@ protected:
   void modRM(int32_t mod, int32_t rm, int32_t reg);
   void modRMSibSB(int32_t reg, const sib_t &sib);
 
+  void postEmit();
+
+  uint32_t prior32(uint32_t index) const {
+    return *(uint32_t*)(ptr-index);
+  }
+
+  uint8_t prior8(uint32_t index) const {
+    return *(uint8_t*)(ptr-index);
+  }
+
+  uint8_t *priorPtr(uint32_t back) const {
+    return (uint8_t*)(ptr-back);
+  }
+
   uint8_t *start;
   uint8_t *ptr;
   const uint8_t *end;
+
+  uint8_t* peepCeil;
 
 }; // struct runasm_t
 

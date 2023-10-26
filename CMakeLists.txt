@@ -6,12 +6,8 @@ if(NOT MSVC)
 endif()
 
 add_library(libcj
-    libcj/chunks.cpp
-    libcj/chunks.h
     libcj/crapjit.cpp
     libcj/crapjit.h
-    libcj/system.cpp
-    libcj/system.h
     libcj/runasm.h
     libcj/runasm.cpp
 )

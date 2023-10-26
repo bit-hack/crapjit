@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 
 #include "runasm.h"
 
@@ -35,6 +36,12 @@ void runasm_t::write32(void *val) {
   assert((end - ptr) >= 4);
   *(uint32_t *)ptr = uint32_t(val);
   ptr += 4;
+}
+
+void runasm_t::write(const void* data, size_t count) {
+  assert(size_t(end - ptr) >= count);
+  memcpy(ptr, data, count);
+  ptr += count;
 }
 
 void runasm_t::setTarget(rel8_t j8, label_t target) {
@@ -111,11 +118,13 @@ void runasm_t::modRMSibSB(int32_t rm, const sib_t &sib) {
   }
 }
 
-// mov instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::MOV(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x89);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::MOV(mem32_t dst, gp_reg32_t src) {
@@ -123,6 +132,7 @@ void runasm_t::MOV(mem32_t dst, gp_reg32_t src) {
   write8(0x89);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg32_t dst, mem32_t src) {
@@ -130,6 +140,7 @@ void runasm_t::MOV(gp_reg32_t dst, mem32_t src) {
   write8(0x8B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg32_t dst, deref_t src) {
@@ -147,11 +158,13 @@ void runasm_t::MOV(gp_reg32_t dst, deref_t src) {
       modRM(0, dst, src.reg);
     }
   }
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg32_t dst, sib_t src) {
   write8(0x8B);
   modRMSibSB(dst, src);
+  postEmit();
 }
 
 void runasm_t::MOV(deref_t dst, gp_reg32_t src) {
@@ -169,16 +182,19 @@ void runasm_t::MOV(deref_t dst, gp_reg32_t src) {
       modRM(0, src, dst.reg);
     }
   }
+  postEmit();
 }
 
 void runasm_t::MOV(sib_t dst, gp_reg32_t src) {
   write8(0x89);
   modRMSibSB(src, dst);
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg32_t dst, uint32_t src) {
   write8(0xB8 | dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOV(mem32_t dst, uint32_t src) {
@@ -187,6 +203,7 @@ void runasm_t::MOV(mem32_t dst, uint32_t src) {
   modRM(0, 0, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOV(mem16_t dst, gp_reg16_t src) {
@@ -195,6 +212,7 @@ void runasm_t::MOV(mem16_t dst, gp_reg16_t src) {
   write8(0x89);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg16_t dst, mem16_t src) {
@@ -203,6 +221,7 @@ void runasm_t::MOV(gp_reg16_t dst, mem16_t src) {
   write8(0x8B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOV(mem16_t dst, uint16_t src) {
@@ -212,6 +231,7 @@ void runasm_t::MOV(mem16_t dst, uint16_t src) {
   modRM(0, 0, DISP32);
   write32(dst);
   write16(src);
+  postEmit();
 }
 
 void runasm_t::MOV(mem8_t dst, gp_reg8_t src) {
@@ -219,6 +239,7 @@ void runasm_t::MOV(mem8_t dst, gp_reg8_t src) {
   write8(0x88);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::MOV(gp_reg8_t dst, mem8_t src) {
@@ -226,6 +247,7 @@ void runasm_t::MOV(gp_reg8_t dst, mem8_t src) {
   write8(0x8A);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOV(mem8_t dst, uint8_t src) {
@@ -235,13 +257,16 @@ void runasm_t::MOV(mem8_t dst, uint8_t src) {
   modRM(0, 0, DISP32);
   write32(dst);
   write8(src);
+  postEmit();
 }
 
-// mov sign extend
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::MOVSX(gp_reg32_t dst, gp_reg8_t src) {
   write16(0xBE0F);
   modRM(3, dst, src);
+  postEmit();
 }
 
 void runasm_t::MOVSX(gp_reg32_t dst, mem8_t src) {
@@ -249,11 +274,13 @@ void runasm_t::MOVSX(gp_reg32_t dst, mem8_t src) {
   write16(0xBE0F);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOVSX(gp_reg32_t dst, gp_reg16_t src) {
   write16(0xBF0F);
   modRM(3, dst, src);
+  postEmit();
 }
 
 void runasm_t::MOVSX(gp_reg32_t dst, mem16_t src) {
@@ -261,13 +288,17 @@ void runasm_t::MOVSX(gp_reg32_t dst, mem16_t src) {
   write16(0xBF0F);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// mov zero extend
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 
 void runasm_t::MOVZX(gp_reg32_t dst, gp_reg8_t src) {
   write16(0xB60F);
   modRM(3, dst, src);
+  postEmit();
 }
 
 void runasm_t::MOVZX(gp_reg32_t dst, mem8_t src) {
@@ -275,11 +306,13 @@ void runasm_t::MOVZX(gp_reg32_t dst, mem8_t src) {
   write16(0xB60F);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::MOVZX(gp_reg32_t dst, gp_reg16_t src) {
   write16(0xB70F);
   modRM(3, dst, src);
+  postEmit();
 }
 
 void runasm_t::MOVZX(gp_reg32_t dst, mem16_t src) {
@@ -287,14 +320,17 @@ void runasm_t::MOVZX(gp_reg32_t dst, mem16_t src) {
   write16(0xB70F);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// conditional move instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CMOV(cc_t cc, gp_reg32_t dst, gp_reg32_t src) {
   write8(0x0F);
   write8(0x40 | cc);
   modRM(3, dst, src);
+  postEmit();
 }
 
 void runasm_t::CMOV(cc_t cc, gp_reg32_t dst, mem32_t src) {
@@ -303,9 +339,11 @@ void runasm_t::CMOV(cc_t cc, gp_reg32_t dst, mem32_t src) {
   write8(0x40 | cc);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// add instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::ADD(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -315,6 +353,7 @@ void runasm_t::ADD(gp_reg32_t dst, uint32_t src) {
     modRM(3, 0, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::ADD(mem32_t dst, uint32_t src) {
@@ -323,11 +362,13 @@ void runasm_t::ADD(mem32_t dst, uint32_t src) {
   modRM(0, 0, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::ADD(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x01);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::ADD(mem32_t dst, gp_reg32_t src) {
@@ -335,6 +376,7 @@ void runasm_t::ADD(mem32_t dst, gp_reg32_t src) {
   write8(0x01);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::ADD(gp_reg32_t dst, mem32_t src) {
@@ -342,6 +384,7 @@ void runasm_t::ADD(gp_reg32_t dst, mem32_t src) {
   write8(0x03);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::ADD(deref_t dst, gp_reg32_t src) {
@@ -359,9 +402,11 @@ void runasm_t::ADD(deref_t dst, gp_reg32_t src) {
       modRM(0, src, dst.reg);
     }
   }
+  postEmit();
 }
 
-// add with carry instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::ADC(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -371,11 +416,13 @@ void runasm_t::ADC(gp_reg32_t dst, uint32_t src) {
     modRM(3, 2, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::ADC(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x11);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::ADC(gp_reg32_t dst, mem32_t src) {
@@ -383,12 +430,15 @@ void runasm_t::ADC(gp_reg32_t dst, mem32_t src) {
   write8(0x13);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// increment instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::INC(gp_reg32_t dst) {
   write8(0x40 + dst);
+  postEmit();
 }
 
 void runasm_t::INC(mem32_t dst) {
@@ -396,9 +446,11 @@ void runasm_t::INC(mem32_t dst) {
   write8(0xFF);
   modRM(0, 0, DISP32);
   write32(dst);
+  postEmit();
 }
 
-// subtract instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SUB(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -408,11 +460,13 @@ void runasm_t::SUB(gp_reg32_t dst, uint32_t src) {
     modRM(3, 5, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::SUB(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x29);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::SUB(gp_reg32_t dst, mem32_t src) {
@@ -420,6 +474,7 @@ void runasm_t::SUB(gp_reg32_t dst, mem32_t src) {
   write8(0x2B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::SUB(deref_t dst, gp_reg32_t src) {
@@ -438,9 +493,11 @@ void runasm_t::SUB(deref_t dst, gp_reg32_t src) {
       modRM(0, src, dst.reg);
     }
   }
+  postEmit();
 }
 
-// subtract with borrow instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SBB(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -450,11 +507,13 @@ void runasm_t::SBB(gp_reg32_t dst, uint32_t src) {
     modRM(3, 3, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::SBB(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x19);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::SBB(gp_reg32_t dst, mem32_t src) {
@@ -462,12 +521,15 @@ void runasm_t::SBB(gp_reg32_t dst, mem32_t src) {
   write8(0x1B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// decrement instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::DEC(gp_reg32_t dst) {
   write8(0x48 + dst);
+  postEmit();
 }
 
 void runasm_t::DEC(mem32_t dst) {
@@ -475,13 +537,16 @@ void runasm_t::DEC(mem32_t dst) {
   write8(0xFF);
   modRM(0, 1, DISP32);
   write32(dst);
+  postEmit();
 }
 
-// multiply instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::MUL(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 4, src);
+  postEmit();
 }
 
 void runasm_t::MUL(mem32_t src) {
@@ -489,13 +554,16 @@ void runasm_t::MUL(mem32_t src) {
   write8(0xF7);
   modRM(0, 4, DISP32);
   write32(src);
+  postEmit();
 }
 
-// integer multiply instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::IMUL(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 5, src);
+  postEmit();
 }
 
 void runasm_t::IMUL(mem32_t src) {
@@ -503,18 +571,22 @@ void runasm_t::IMUL(mem32_t src) {
   write8(0xF7);
   modRM(0, 5, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::IMUL(gp_reg32_t dst, gp_reg32_t src) {
   write16(0xAF0F);
   modRM(3, dst, src);
+  postEmit();
 }
 
-// divide instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::DIV(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 6, src);
+  postEmit();
 }
 
 void runasm_t::DIV(mem32_t src) {
@@ -522,13 +594,16 @@ void runasm_t::DIV(mem32_t src) {
   write8(0xF7);
   modRM(0, 6, DISP32);
   write32(src);
+  postEmit();
 }
 
-// integer divide instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::IDIV(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 7, src);
+  postEmit();
 }
 
 void runasm_t::IDIV(mem32_t src) {
@@ -536,9 +611,11 @@ void runasm_t::IDIV(mem32_t src) {
   write8(0xF7);
   modRM(0, 7, DISP32);
   write32(src);
+  postEmit();
 }
 
-// rotate carry right instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::RCR(int32_t dst, int32_t src) {
   if (src == 1) {
@@ -549,9 +626,11 @@ void runasm_t::RCR(int32_t dst, int32_t src) {
     write8(0xd8 | dst);
     write8(src);
   }
+  postEmit();
 }
 
-// shift left instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SHL(gp_reg32_t dst, uint8_t src) {
   if (src == 1) {
@@ -562,14 +641,17 @@ void runasm_t::SHL(gp_reg32_t dst, uint8_t src) {
   write8(0xC1);
   modRM(3, 4, dst);
   write8(src);
+  postEmit();
 }
 
 void runasm_t::SHL(gp_reg32_t dst) {
   write8(0xD3);
   modRM(3, 4, dst);
+  postEmit();
 }
 
-// shift right instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SHR(gp_reg32_t dst, uint8_t src) {
   if (src == 1) {
@@ -580,27 +662,33 @@ void runasm_t::SHR(gp_reg32_t dst, uint8_t src) {
   write8(0xC1);
   modRM(3, 5, dst);
   write8(src);
+  postEmit();
 }
 
 void runasm_t::SHR(gp_reg32_t dst) {
   write8(0xD3);
   modRM(3, 5, dst);
+  postEmit();
 }
 
-// shift arithmetic right instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SAR(gp_reg32_t dst, uint8_t src) {
   write8(0xC1);
   modRM(3, 7, dst);
   write8(src);
+  postEmit();
 }
 
 void runasm_t::SAR(gp_reg32_t dst) {
   write8(0xD3);
   modRM(3, 7, dst);
+  postEmit();
 }
 
-// bitwise or instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::OR(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -610,6 +698,7 @@ void runasm_t::OR(gp_reg32_t dst, uint32_t src) {
     modRM(3, 1, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::OR(mem32_t dst, uint32_t src) {
@@ -618,11 +707,13 @@ void runasm_t::OR(mem32_t dst, uint32_t src) {
   modRM(0, 1, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::OR(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x09);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::OR(mem32_t dst, gp_reg32_t src) {
@@ -630,6 +721,7 @@ void runasm_t::OR(mem32_t dst, gp_reg32_t src) {
   write8(0x09);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::OR(gp_reg32_t dst, mem32_t src) {
@@ -637,9 +729,11 @@ void runasm_t::OR(gp_reg32_t dst, mem32_t src) {
   write8(0x0B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// bitwise xor instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::XOR(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -649,6 +743,7 @@ void runasm_t::XOR(gp_reg32_t dst, uint32_t src) {
     modRM(3, 6, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::XOR(mem32_t dst, uint32_t src) {
@@ -657,6 +752,7 @@ void runasm_t::XOR(mem32_t dst, uint32_t src) {
   modRM(0, 6, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::XOR(gp_reg32_t dst, gp_reg32_t src) {
@@ -669,6 +765,7 @@ void runasm_t::XOR(mem32_t dst, gp_reg32_t src) {
   write8(0x31);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::XOR(gp_reg32_t dst, mem32_t src) {
@@ -676,9 +773,11 @@ void runasm_t::XOR(gp_reg32_t dst, mem32_t src) {
   write8(0x33);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// bitwise and instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::AND(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -688,6 +787,7 @@ void runasm_t::AND(gp_reg32_t dst, uint32_t src) {
     modRM(3, 0x4, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::AND(mem32_t dst, uint32_t src) {
@@ -696,11 +796,13 @@ void runasm_t::AND(mem32_t dst, uint32_t src) {
   modRM(0, 0x4, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::AND(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x21);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::AND(mem32_t dst, gp_reg32_t src) {
@@ -708,6 +810,7 @@ void runasm_t::AND(mem32_t dst, gp_reg32_t src) {
   write8(0x21);
   modRM(0, src, DISP32);
   write32(dst);
+  postEmit();
 }
 
 void runasm_t::AND(gp_reg32_t dst, mem32_t src) {
@@ -715,31 +818,39 @@ void runasm_t::AND(gp_reg32_t dst, mem32_t src) {
   write8(0x23);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// bitwise not instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::NOT(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 2, src);
+  postEmit();
 }
 
-// arithmetic negate instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::NEG(gp_reg32_t src) {
   write8(0xF7);
   modRM(3, 3, src);
+  postEmit();
 }
 
 void runasm_t::NOP() {
   write8(0x90);
+  postEmit();
 }
 
 void runasm_t::INT3() {
   write8(0xCC);
+  postEmit();
 }
 
-// jump instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 rel8_t runasm_t::Jcc8(cc_t cc, label_t dst) {
   write8(0x70 | cc);
@@ -748,6 +859,8 @@ rel8_t runasm_t::Jcc8(cc_t cc, label_t dst) {
   if (rel) {
     setTarget(rel, dst);
   }
+  peepCeil = ptr;
+  postEmit();
   return rel;
 }
 
@@ -759,6 +872,8 @@ rel32_t runasm_t::Jcc32(cc_t cc, label_t dst) {
   if (dst) {
     setTarget(rel, dst);
   }
+  peepCeil = ptr;
+  postEmit();
   return rel;
 }
 
@@ -769,6 +884,8 @@ rel8_t runasm_t::JMP8(label_t dst) {
   if (dst) {
     setTarget(rel, dst);
   }
+  peepCeil = ptr;
+  postEmit();
   return rel;
 }
 
@@ -779,15 +896,19 @@ rel32_t runasm_t::JMP32(label_t dst) {
   if (dst) {
     setTarget(rel, dst);
   }
+  peepCeil = ptr;
+  postEmit();
   return rel;
 }
 
 void runasm_t::JMP(gp_reg32_t dst) {
   write8(0xFF);
   modRM(3, 4, dst);
+  postEmit();
 }
 
-// call subroutine instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CALL(void *func) {
   assert(func);
@@ -795,6 +916,7 @@ void runasm_t::CALL(void *func) {
   write32(0u);
   rel32_t rel = (rel32_t)(ptr - 4);
   setTarget(rel, func);
+  postEmit();
 }
 
 rel32_t runasm_t::CALL(label_t dst) {
@@ -804,12 +926,15 @@ rel32_t runasm_t::CALL(label_t dst) {
   if (dst) {
     setTarget(rel, dst);
   }
+  peepCeil = ptr;
+  postEmit();
   return rel;
 }
 
 void runasm_t::CALL(gp_reg32_t dst) {
   write8(0xFF);
   modRM(3, 2, dst);
+  postEmit();
 }
 
 void runasm_t::CALL_32M(void *dst) {
@@ -817,17 +942,21 @@ void runasm_t::CALL_32M(void *dst) {
   write8(0xFF);
   modRM(0, 2, DISP32);
   write32(dst);
+  postEmit();
 }
 
-// bit test instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::BT(gp_reg32_t dst, int32_t src) {
   write16(0xba0f);
   write8(0xe0 | dst);
   write8(src);
+  postEmit();
 }
 
-// compare instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CMP(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -837,6 +966,7 @@ void runasm_t::CMP(gp_reg32_t dst, uint32_t src) {
     modRM(3, 7, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::CMP(mem32_t dst, uint32_t src) {
@@ -845,11 +975,13 @@ void runasm_t::CMP(mem32_t dst, uint32_t src) {
   modRM(0, 7, DISP32);
   write32(dst);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::CMP(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x39);
   modRM(3, src, dst);
+  postEmit();
 }
 
 void runasm_t::CMP(gp_reg32_t dst, mem32_t src) {
@@ -857,9 +989,11 @@ void runasm_t::CMP(gp_reg32_t dst, mem32_t src) {
   write8(0x3B);
   modRM(0, dst, DISP32);
   write32(src);
+  postEmit();
 }
 
-// test instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::TEST(gp_reg32_t dst, uint32_t src) {
   if (dst == EAX) {
@@ -869,43 +1003,55 @@ void runasm_t::TEST(gp_reg32_t dst, uint32_t src) {
     modRM(3, 0, dst);
   }
   write32(src);
+  postEmit();
 }
 
 void runasm_t::TEST(gp_reg32_t dst, gp_reg32_t src) {
   write8(0x85);
   modRM(3, src, dst);
+  postEmit();
 }
 
-// conditional byte set instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::SET(cc_t cc, gp_reg32_t dst) {
   write8(0x0F);
   write8(0x90 | cc);
   write8(0xC0 | dst);
+  postEmit();
 }
 
-// convert byte dst word instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CBW() {
   write16(0x9866);
+  postEmit();
 }
 
-// convert word dst doubleword instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CWD() {
   write8(0x98);
+  postEmit();
 }
 
-// convert doubleword dst quadword instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::CDQ() {
   write8(0x99);
+  postEmit();
 }
 
-// stack push instructions
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::PUSH(gp_reg32_t src) {
   write8(0x50 | src);
+  postEmit();
 }
 
 void runasm_t::PUSH(mem32_t src) {
@@ -913,35 +1059,108 @@ void runasm_t::PUSH(mem32_t src) {
   write8(0xFF);
   modRM(0, 6, DISP32);
   write32(src);
+  postEmit();
 }
 
 void runasm_t::PUSH(uint32_t src) {
   write8(0x68);
   write32(src);
+  postEmit();
 }
 
-// stack pop instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::POP(gp_reg32_t src) {
   write8(0x58 | src);
+  postEmit();
 }
 
-// push general purpose registers
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::PUSHA() {
   write8(0x60);
+  postEmit();
 }
 
-// pop general purpose registers
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::POPA() {
   write8(0x61);
+  postEmit();
 }
 
-// return src subroutine instruction
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 void runasm_t::RET() {
   write8(0xC3);
+  postEmit();
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+void runasm_t::postEmit() {
+
+  static const uint8_t PUSH_EAX = 0x50;
+  static const uint8_t POP_EAX  = 0x58;
+
+  const size_t space = ptr - peepCeil;
+
+  bool modified = false;
+  do {
+    modified = false;
+
+    // [ push eax | pop eax ] => []
+    if (space >= 2) {
+      if (prior8(2) == PUSH_EAX &&
+          prior8(1) == POP_EAX) {
+        ptr -= 2;
+        modified = true;
+      }
+    }
+
+    // [ mov eax | 0xaabbccdd | push eax ] => [ push 0xaabbccdd ]
+    if (space >= 6) {
+      if (prior8(6) == 0xB8 &&
+          prior8(1) == PUSH_EAX) {
+        const uint32_t imm = prior32(5);
+        ptr -= 6;
+        PUSH(imm);
+        modified = true;
+      }
+    }
+
+    // [ push 0xaabbccdd | pop eax ] => [ mov eax 0xaabbccdd ]
+    if (space >= 6) {
+      if (prior8(6) == 0x68 && prior8(1) == POP_EAX) {
+        const uint32_t imm = prior32(5);
+        ptr -= 6;
+        MOV(EAX, imm);
+        modified = true;
+      }
+    }
+
+#if 0
+    // [ and eax 1 | cmp eax 0 ] => [ cmp al 0 ]
+    if (space >= 6) {
+
+      static const char* seq = "\x25\x01\x00\x00\x00"  // and eax, 1
+                               "\x3d\x00\x00\x00\x00"; // cmp eax, 0
+      static const char* rep = "\x3c\x00";             // cmp al,  0
+
+      if (0 == memcmp(priorPtr(10), seq, 10)) {
+        ptr -= 10;
+        write(rep, 2);
+        modified = true;
+      }
+    }
+#endif
+
+  } while (modified);
 }
 
 } // namespace runasm

@@ -158,7 +158,7 @@ static bool test_mul() {
 // ----------------------------------------------------------------------------
 static bool test_div() {
   banner(__func__);
-
+#if 0
   using namespace cj;
   typedef uint32_t(*jitfunc_t)(void);
 
@@ -173,6 +173,9 @@ static bool test_div() {
   const uint32_t ret = f();
 
   return 20 == ret;
+#else
+  return false;
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -745,7 +748,7 @@ static const test_t tests[] = {
   test_and,
   test_or,
   test_mul,
-//  test_div,
+  test_div,
   test_notl,
   test_jmp,
   test_jz,
@@ -771,11 +774,22 @@ static const test_t tests[] = {
 
 int main() {
 
-    for (uint32_t i = 0; tests[i]; ++i) {
-        fflush(stdout);
-        const bool res = tests[i]();
-        printf("%s\n", res ? "pass" : "fail");
-    }
+  uint32_t total  = 0;
+  uint32_t passed = 0;
 
-    return 0;
+  for (uint32_t i = 0; tests[i]; ++i) {
+    fflush(stdout);
+    const bool res = tests[i]();
+    printf("%s\n", res ? "pass" : "fail X");
+
+    total  += 1;
+    passed += res ? 1 : 0;
+  }
+
+  printf("%d of %d passed\n", passed, total);
+
+  uint32_t fails = total - passed;
+  printf("%d fail%s\n", fails, (fails == 1 ? "" : "s"));
+
+  return 0;
 }

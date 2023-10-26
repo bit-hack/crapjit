@@ -1,8 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <list>
+#include <vector>
 
-#include "chunks.h"
 #include "runasm.h"
 
 namespace cj {
@@ -26,7 +25,6 @@ struct ir_t {
     IR_ADD,
     IR_SUB,
     IR_MUL,
-    IR_DIV,
     IR_AND,
     IR_OR,
     IR_NOTL,
@@ -40,30 +38,65 @@ struct ir_t {
 
   ir_t(type_t type, uint32_t imm)
     : type(type)
-    , _imm(imm)
+    , imm_(imm)
   {
   }
 
   ir_t(type_t type, ir_t &target)
     : type(type)
-    , _target(&target)
+    , target_(&target)
   {
   }
 
   ir_t(type_t type)
     : type(type)
-    , _imm(0)
+    , imm_(0)
   {
   }
 
   void target(ir_t& t) {
-    _target = &t;
+    target_ = &t;
   }
 
   union {
-    uint32_t _imm;
-    ir_t*    _target;
+    uint32_t imm_;
+    ir_t* target_;
   };
+};
+
+typedef uint8_t* label_t;
+
+struct reloc_t {
+
+  enum type_t {
+    INVALID,
+    RELOC_ABS,
+    RELOC_REL,
+  };
+
+  reloc_t()
+    : type_(INVALID)
+    , base_(nullptr)
+    , inst_(nullptr)
+  {
+  }
+
+  reloc_t(uint8_t* base, type_t type, const ir_t *ir)
+    : base_(base)
+    , type_(type)
+    , inst_(ir)
+  {
+  }
+
+  bool isValid() const {
+    return base_ != nullptr;
+  }
+
+  void set(label_t);
+
+  type_t      type_;  // rellcation type
+  uint8_t*    base_;  // code pointer relocation is needed
+  const ir_t* inst_;  // instruction reloc applies to
 };
 
 struct crapjit_t {
@@ -93,7 +126,6 @@ struct crapjit_t {
     void    emit_add    ();
     void    emit_sub    ();
     void    emit_mul    ();
-    void    emit_div    ();
 
     void    emit_and    ();
     void    emit_or     ();
@@ -106,14 +138,20 @@ struct crapjit_t {
     void    emit_eq     ();
     void    emit_neq    ();
 
-    void*   finish      ();
+    void* finish();
+
+    void clear();
+
+    std::vector<ir_t*> ir;
 
 protected:
-    ir_t& _push(const ir_t& inst);
-
-    std::list<ir_t> ir;
+    ir_t&    push_      (const ir_t& inst);
+    void     dumpCode_  (const uint8_t *until);
+    uint32_t codegen_   (runasm::runasm_t& x86, uint32_t index, reloc_t& reloc);
+    uint32_t codegenCmp_(runasm::runasm_t& x86, uint32_t index, reloc_t& reloc);
 
     uint8_t *code_;
+    size_t code_size_;
 };
 
 }  // namespace cj
