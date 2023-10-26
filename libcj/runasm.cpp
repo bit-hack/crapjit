@@ -1117,6 +1117,18 @@ void runasm_t::RET() {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+static bool match(const uint8_t *src, const char* pat, const char* mask, uint32_t count) {
+  for (; count--; ++src, ++pat, ++mask) {
+    const uint8_t s = *src;
+    const uint8_t m = *mask;
+    const uint8_t p = *pat;
+    if ((s & m) != p) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void runasm_t::postEmit() {
 
   static const uint8_t PUSH_EAX = 0x50;
@@ -1182,7 +1194,9 @@ void runasm_t::postEmit() {
     // 89 c2                   mov    edx, eax
     // 81 fa 01 00 00 00       cmp    edx, 0x1
     if (space >= 8) {
-      if (prior8(8) == 0x89 && prior8(7) == 0xc2 && prior8(6) == 0x81 && prior8(5) == 0xfa) {
+      if (match(priorPtr(8),
+        "\x89\xc2\x81\xfa",
+        "\xff\xff\xff\xff", 4)) {
         const uint32_t imm = prior32(4);
         ptr -= 8;
         CMP(EAX, imm);
@@ -1194,7 +1208,9 @@ void runasm_t::postEmit() {
     // b8 01 00 00 00          mov    eax, 0x1
     // 29 44 24 00             sub    DWORD PTR[esp + 0x0], eax
     if (space >= 9) {
-      if (prior8(9) == 0xb8 && prior8(4) == 0x29 && prior8(3) == 0x44 && prior8(2) == 0x24 && prior8(1) == 0x00) {
+      if (match(priorPtr(9),
+        "\xb8\x00\x00\x00\x00\x29\x44\x24\x00",
+        "\xff\x00\x00\x00\x00\xff\xff\xff\xff", 9)) {
         const uint32_t imm = prior32(8);
         ptr -= 9;
         write("\x81\x2c\x24", 3);
