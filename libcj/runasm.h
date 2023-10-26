@@ -245,9 +245,9 @@ struct runasm_t {
   void MOV(mem32_t dst, uint32_t src);
 
   // mov r32, [base + scale*index]
-  void MOV(gp_reg32_t dst, sib_t src);
+  void MOV(gp_reg32_t dst, const sib_t &src);
   // mov [base + scale*index], r32
-  void MOV(sib_t dst, gp_reg32_t src);
+  void MOV(const sib_t &dst, gp_reg32_t src);
 
   // mov r16 to m16
   void MOV(mem16_t dst, gp_reg16_t src);
@@ -595,6 +595,8 @@ struct runasm_t {
   // push imm32 to stack
   void PUSH(uint32_t src);
 
+  void PUSH(const sib_t &src);
+
   // push All General-Purpose Registers
   void PUSHA();
 
@@ -604,6 +606,8 @@ struct runasm_t {
 
   // pop r32 from stack
   void POP(gp_reg32_t src);
+
+  void POP(const sib_t& src);
 
   // pop All General-Purpose Registers
   void POPA();

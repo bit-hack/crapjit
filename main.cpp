@@ -598,20 +598,37 @@ static bool test_locals() {
 
   using namespace cj;
   typedef uint32_t(*jitfunc_t)();
-
-  // todo: verify this properly!
-
-  crapjit_t j;
-  j.emit_frame(1);
-  j.emit_const(0xc0ffee);
-  j.emit_setl(-1);
-  j.emit_getl(-1);
-  j.emit_return(1);
-
-  jitfunc_t f = (jitfunc_t)j.finish();
-
-  const uint32_t ret = f();
-  return 0xc0ffee == ret;
+  {
+    crapjit_t j;
+    j.emit_frame(2);
+    j.emit_const(0xc0ffee);
+    j.emit_const(0xb0ba);
+    j.emit_setl(-1);
+    j.emit_setl(-2);
+    j.emit_getl(-1);
+    j.emit_return(2);
+    jitfunc_t f = (jitfunc_t)j.finish();
+    if (0xb0ba != f()) {
+      return false;
+    }
+  }
+  {
+    crapjit_t j;
+    j.emit_frame(2);
+    j.emit_const(0xc0ffee);
+    j.emit_const(0xb0ba);
+    j.emit_setl(-2);
+    j.emit_setl(-1);
+    j.emit_const(0x12345678u);
+    j.emit_drop(1);
+    j.emit_getl(-1);
+    j.emit_return(2);
+    jitfunc_t f = (jitfunc_t)j.finish();
+    if (0xc0ffee != f()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // ----------------------------------------------------------------------------

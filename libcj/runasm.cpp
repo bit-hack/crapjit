@@ -97,7 +97,7 @@ void runasm_t::modRMSibSB(int32_t rm, const sib_t &sib) {
   //   01   100  ...   SIB + disp8
   //   10   100  ...   SIB + disp32
 
-  const int8_t reg  = 4;
+  const int8_t reg = 4;
   const int8_t mod = sib.is_disp ? ((sib.disp & 0xffffff00) ? 2 : 1) : 0;
 
   modRM(mod, rm, reg);
@@ -161,7 +161,7 @@ void runasm_t::MOV(gp_reg32_t dst, deref_t src) {
   postEmit();
 }
 
-void runasm_t::MOV(gp_reg32_t dst, sib_t src) {
+void runasm_t::MOV(gp_reg32_t dst, const sib_t &src) {
   write8(0x8B);
   modRMSibSB(dst, src);
   postEmit();
@@ -185,7 +185,7 @@ void runasm_t::MOV(deref_t dst, gp_reg32_t src) {
   postEmit();
 }
 
-void runasm_t::MOV(sib_t dst, gp_reg32_t src) {
+void runasm_t::MOV(const sib_t &dst, gp_reg32_t src) {
   write8(0x89);
   modRMSibSB(src, dst);
   postEmit();
@@ -1068,11 +1068,25 @@ void runasm_t::PUSH(uint32_t src) {
   postEmit();
 }
 
+void runasm_t::PUSH(const sib_t& sib) {
+  // ff b0 45 23 01 00       push   DWORD PTR[eax + 0x12345]
+  write8(0xff);
+  modRMSibSB(0b110, sib);
+  postEmit();
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
 void runasm_t::POP(gp_reg32_t src) {
   write8(0x58 | src);
+  postEmit();
+}
+
+void runasm_t::POP(const sib_t& sib) {
+  // 8f 83 45 23 01 00       pop    DWORD PTR [ebx+0x12345]
+  write8(0x8f);
+  modRMSibSB(0b000, sib);
   postEmit();
 }
 
@@ -1172,6 +1186,19 @@ void runasm_t::postEmit() {
         const uint32_t imm = prior32(4);
         ptr -= 8;
         CMP(EAX, imm);
+        continue;
+      }
+    }
+
+    // [ mov eax 0xaabbccdd | sub [esp+0] eax ] => [ sub [esp+0] 0xaabbccdd ]
+    // b8 01 00 00 00          mov    eax, 0x1
+    // 29 44 24 00             sub    DWORD PTR[esp + 0x0], eax
+    if (space >= 9) {
+      if (prior8(9) == 0xb8 && prior8(4) == 0x29 && prior8(3) == 0x44 && prior8(2) == 0x24 && prior8(1) == 0x00) {
+        const uint32_t imm = prior32(8);
+        ptr -= 9;
+        write("\x81\x2c\x24", 3);
+        write32(imm);
         continue;
       }
     }

@@ -421,14 +421,21 @@ uint32_t crapjit_t::codegen_(runasm::runasm_t& x86, uint32_t index, reloc_t& rel
     return 1;
 
   case ir_t::IR_GETL:
-    // todo: push [ebp + imm]
+#if 0
     x86.MOV(EAX, sib_t{ 1, int32_t(i.imm_), EBP });
     x86.PUSH(EAX);
+#else
+    x86.PUSH(sib_t{ 1, int32_t(i.imm_), EBP });
+#endif
     return 1;
 
   case ir_t::IR_SETL:
+#if 0
     x86.POP(EAX);
     x86.MOV(sib_t{ 1, int32_t(i.imm_), EBP }, EAX);
+#else
+    x86.POP(sib_t{ 1, int32_t(i.imm_), EBP });
+#endif
     return 1;
 
   default:

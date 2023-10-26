@@ -145,8 +145,8 @@ struct crapjit_t {
     std::vector<ir_t*> ir;
 
 protected:
-    ir_t&    push_      (const ir_t& inst);
-    void     dumpCode_  (const uint8_t *until);
+    ir_t& push_    (const ir_t& inst);
+    void  dumpCode_(const uint8_t *until);
 
     uint32_t codegen_     (runasm::runasm_t& x86, uint32_t index, reloc_t& reloc);
     uint32_t codegenCmp_  (runasm::runasm_t& x86, uint32_t index, reloc_t& reloc);
