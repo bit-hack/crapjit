@@ -615,6 +615,16 @@ struct runasm_t {
   // return
   void RET();
 
+  // --------------------------------------------------------------------------
+  // peephole optimization related
+  // --------------------------------------------------------------------------
+
+  void peepFence() {
+    // branch targets should not be optimized across
+    // this sets a new boundary for the peephole optimizer
+    peepCeil = ptr;
+  }
+
 protected:
   void modRM(int32_t mod, int32_t rm, int32_t reg);
   void modRMSibSB(int32_t reg, const sib_t &sib);

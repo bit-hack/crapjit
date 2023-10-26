@@ -684,6 +684,77 @@ static bool test_call_2() {
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
+static bool test_cmp_jmp() {
+  banner(__func__);
+  using namespace cj;
+
+  struct X {
+    static void emit_cmp(crapjit_t& j, uint32_t i) {
+      switch (i) {
+      case 0: j.emit_lt();  break;
+      case 1: j.emit_leq(); break;
+      case 2: j.emit_gt();  break;
+      case 3: j.emit_geq(); break;
+      case 4: j.emit_eq();  break;
+      case 5: j.emit_neq(); break;
+      }
+    }
+    static ir_t & emit_jmp(crapjit_t& j, uint32_t i) {
+      return (i == 0) ? j.emit_jnz() : j.emit_jz();
+    }
+  };
+
+  typedef uint32_t(*jitfunc_t)(uint32_t a, uint32_t b);
+
+  static const uint32_t ref[12] = {
+    0b0100, // lt  jnz    0< 0  0< 1  1< 0  1< 1
+    0b1011, // lt  jz
+    0b1101, // leq jnz    0<=0  0<=1  1<=0  1<=1
+    0b0010, // leq jz
+    0b0010, // gt  jnz    0> 0  0> 1  1> 0  1> 1
+    0b1101, // gt  jz
+    0b1011, // geq jnz    0>=0  0>=1  1>=0  1>=1
+    0b0100, // geq jz
+    0b1001, // eq  jnz    0==0  0==1  1==0  1==1
+    0b0110, // eq  jz
+    0b0110, // neq jnz    0!=0  0!=1  1!=0  1!=1
+    0b1001, // neq jz
+  };
+
+  for (uint32_t jmp = 0; jmp <= 1; ++jmp) {
+    for (uint32_t cmp = 0; cmp <= 5; ++cmp) {
+
+      crapjit_t j;
+                j.emit_frame(0);     //
+                j.emit_getl(2);      // a
+                j.emit_getl(3);      // b
+                X::emit_cmp(j, cmp); // (a op b)
+      auto &J = X::emit_jmp(j, jmp); // (jz/jnz) ------.
+                j.emit_const(0);     //                |
+                j.emit_return(0);    // return 0;      |
+      auto &L = j.emit_label();      // <--------------'
+                j.emit_const(1);     //
+                j.emit_return(0);    // return 1;
+      J.target(L);
+
+      jitfunc_t f = (jitfunc_t)j.finish();
+
+      uint32_t code  = f(0, 0) << 3;
+               code |= f(0, 1) << 2;
+               code |= f(1, 0) << 1;
+               code |= f(1, 1) << 0;
+      uint32_t verf  = ref[cmp * 2 + jmp];
+      if (code != verf) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 static void *jit_factoral(cj::crapjit_t & j) {
   using namespace cj;
 
@@ -761,6 +832,7 @@ static const test_t tests[] = {
   test_neq,
   test_drop,
   test_dup,
+  test_cmp_jmp,
   test_loop_1,
   test_args_1,
   test_args_2,

@@ -179,6 +179,9 @@ void* crapjit_t::finish() {
     ir_t* i = ir[index];
 
     if (i->type == ir_t::IR_LABEL) {
+
+      x86.peepFence();
+
       labels[i] = x86.head();
       ++index;
       continue;

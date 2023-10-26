@@ -17,4 +17,3 @@ add_executable(crapjit
 )
 
 target_link_libraries(crapjit libcj)
-
