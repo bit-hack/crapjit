@@ -1108,18 +1108,16 @@ void runasm_t::postEmit() {
   static const uint8_t PUSH_EAX = 0x50;
   static const uint8_t POP_EAX  = 0x58;
 
-  const size_t space = ptr - peepCeil;
-
-  bool modified = false;
   do {
-    modified = false;
+
+    const size_t space = ptr - peepCeil;
 
     // [ push eax | pop eax ] => []
     if (space >= 2) {
       if (prior8(2) == PUSH_EAX &&
           prior8(1) == POP_EAX) {
         ptr -= 2;
-        modified = true;
+        continue;
       }
     }
 
@@ -1130,7 +1128,7 @@ void runasm_t::postEmit() {
         const uint32_t imm = prior32(5);
         ptr -= 6;
         PUSH(imm);
-        modified = true;
+        continue;
       }
     }
 
@@ -1140,27 +1138,47 @@ void runasm_t::postEmit() {
         const uint32_t imm = prior32(5);
         ptr -= 6;
         MOV(EAX, imm);
-        modified = true;
+        continue;
       }
     }
 
-#if 0
-    // [ and eax 1 | cmp eax 0 ] => [ cmp al 0 ]
-    if (space >= 6) {
-
-      static const char* seq = "\x25\x01\x00\x00\x00"  // and eax, 1
-                               "\x3d\x00\x00\x00\x00"; // cmp eax, 0
-      static const char* rep = "\x3c\x00";             // cmp al,  0
-
-      if (0 == memcmp(priorPtr(10), seq, 10)) {
-        ptr -= 10;
-        write(rep, 2);
-        modified = true;
+    // [ mov eax 0xaabbccdd | pop edx | cmp edx eax ] => [ pop edx | cmp edx, 0xaabbccdd ]
+    if (space >= 8) {
+      if (prior8(8) == 0xb8 && prior8(3) == 0x5a && prior8(2) == 0x39 && prior8(1) == 0xc2) {
+        const uint32_t imm = prior32(7);
+        ptr -= 8;
+        POP(EDX);
+        CMP(EDX, imm);
+        continue;
       }
     }
-#endif
 
-  } while (modified);
+    // [ push eax | pop edx ] => [ mov edx, eax ]
+    // 50       push   eax
+    // 5a       pop    edx
+    if (space >= 2) {
+      if (prior8(2) == 0x50 && prior8(1) == 0x5a) {
+        ptr -= 2;
+        MOV(EDX, EAX);
+        continue;
+      }
+    }
+
+    // [ mov edx eax | cmp edx 0xaabbccdd ] => [ cmp eax 0xaabbccdd ]
+    // 89 c2                   mov    edx, eax
+    // 81 fa 01 00 00 00       cmp    edx, 0x1
+    if (space >= 8) {
+      if (prior8(8) == 0x89 && prior8(7) == 0xc2 && prior8(6) == 0x81 && prior8(5) == 0xfa) {
+        const uint32_t imm = prior32(4);
+        ptr -= 8;
+        CMP(EAX, imm);
+        continue;
+      }
+    }
+
+    break;
+
+  } while (true);
 }
 
 } // namespace runasm

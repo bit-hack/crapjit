@@ -283,6 +283,22 @@ uint32_t crapjit_t::codegenCmp_(runasm::runasm_t& x86, uint32_t index, reloc_t& 
   return 1;
 }
 
+uint32_t crapjit_t::codegenConst_(runasm::runasm_t& x86, uint32_t index, reloc_t& reloc) {
+  using namespace runasm;
+
+  const ir_t& i = *ir[index];
+
+  if (i.imm_ == 0) {
+    x86.XOR(EAX, EAX);
+  }
+  else {
+    x86.MOV(EAX, i.imm_);
+  }
+  x86.PUSH(EAX);
+
+  return 1;
+}
+
 uint32_t crapjit_t::codegen_(runasm::runasm_t& x86, uint32_t index, reloc_t& reloc) {
   using namespace runasm;
 
@@ -298,9 +314,7 @@ uint32_t crapjit_t::codegen_(runasm::runasm_t& x86, uint32_t index, reloc_t& rel
     return codegenCmp_(x86, index, reloc);
 
   case ir_t::IR_CONST:
-    x86.MOV(EAX, i.imm_);
-    x86.PUSH(EAX);
-    return 1;
+    return codegenConst_(x86, index, reloc);
 
   case ir_t::IR_DROP:
     if (i.imm_) {
@@ -407,6 +421,7 @@ uint32_t crapjit_t::codegen_(runasm::runasm_t& x86, uint32_t index, reloc_t& rel
     return 1;
 
   case ir_t::IR_GETL:
+    // todo: push [ebp + imm]
     x86.MOV(EAX, sib_t{ 1, int32_t(i.imm_), EBP });
     x86.PUSH(EAX);
     return 1;
